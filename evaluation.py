@@ -113,21 +113,14 @@ class EvaluateClustering:
     def _cal_fitted_cluster_model(self, no_cluster):
         self.clustering_obj = self.Clustering(no_cluster=no_cluster)
         self.clustering_obj.clustering_fit(all_latent_vec=self.all_latent_vec)
-
-    def cal_distortion(self, no_cluster):
-        self._cal_fitted_cluster_model(no_cluster=no_cluster)
-        self.distortion = self.clustering_obj.get_distortion()
+        return self.clustering_obj.get_pred_labels()
 
     def cal_sil_score(self, no_cluster):
-        self._cal_fitted_cluster_model(no_cluster=no_cluster)
-        self.clustering_obj.clustering_predict(all_latent_vec=self.all_latent_vec)
-        pred_labels = self.clustering_obj.get_pred_labels()
+        pred_labels = self._cal_fitted_cluster_model(no_cluster=no_cluster)
         self.sil_score = silhouette_score(self.all_latent_vec, pred_labels)
 
     def cal_vmeasure_score(self, no_cluster):
-        self._cal_fitted_cluster_model(no_cluster=no_cluster)
-        self.clustering_obj.clustering_predict(all_latent_vec=self.all_latent_vec)
-        pred_labels = self.clustering_obj.get_pred_labels()
+        pred_labels = self._cal_fitted_cluster_model(no_cluster=no_cluster)
         self.vmeasure_score = v_measure_score(labels_true=self.true_labels, labels_pred=pred_labels)
 
     def cal_sil_score_range(self, start, end, step):
@@ -135,18 +128,6 @@ class EvaluateClustering:
         for no_cluster in range(start, end + 1, step):
             self.cal_sil_score(no_cluster=no_cluster)
             self.sil_score_list.append((no_cluster, self.get_sil_score()))
-
-    # def cal_vmeasure_score_range(self, start, end, step):
-    #     self.vmeasure_score_list = []
-    #     for no_cluster in range(start, end, step):
-    #         self.cal_vmeasure_score(no_cluster=no_cluster)
-    #         self.vmeasure_score_list.append((no_cluster, self.get_vmeasure_score()))
-
-    def cal_distortion_range(self, start, end, step):
-        self.distortion_list = []
-        for no_cluster in range(start, end + 1, step):
-            self.cal_distortion(no_cluster=no_cluster)
-            self.distortion_list.append((no_cluster, self.get_distortion()))
 
     def draw_sil_score_list(self):
         if len(self.sil_score_list) == 0:
@@ -160,28 +141,6 @@ class EvaluateClustering:
         plt.savefig(fname='./figures/sil_score.png')
         plt.show()
 
-    # def draw_vmeasure_score_list(self):
-    #     if len(self.vmeasure_score_list) == 0:
-    #         raise Exception('V-measure score not calculated')
-    #     plt.close()
-    #     plt.figure(figsize=(20, 15), dpi=100)
-    #     vmeasure_score_array = np.array(self.vmeasure_score_list)
-    #     plt.plot(vmeasure_score_array[:, 0], vmeasure_score_array[:, 1])
-    #     plt.xlabel('Number of Clusters')
-    #     plt.ylabel('V-measure Score')
-    #     plt.savefig(fname=f'./figures/v_measure_score.png')
-    #     plt.show()
-
-    def draw_distortion_list(self):
-        plt.close()
-        plt.figure(figsize=(20, 15), dpi=100)
-        distortion_array = np.array(self.distortion_list)
-        plt.plot(distortion_array[:, 0], distortion_array[:, 1])
-        plt.xlabel('Number of Clusters')
-        plt.ylabel('Distortion')
-        plt.savefig(fname=f'./figures/distortion.png')
-        plt.show()
-
     def get_sil_score(self):
         return self.sil_score
 
@@ -190,15 +149,6 @@ class EvaluateClustering:
 
     def get_vmeasure_score(self):
         return self.vmeasure_score
-
-    # def get_vmeasure_score_list(self):
-    #     return self.vmeasure_score_list
-
-    def get_distortion(self):
-        return self.distortion
-
-    def get_distortion_list(self):
-        return self.distortion_list
 
 
 class LabelCorrection:
