@@ -1,3 +1,4 @@
+import torch
 import torch.optim as optim
 import torch.nn as nn
 from ml_models import Autoencoder, Clustering
@@ -81,44 +82,59 @@ if __name__ == "__main__":
     all_latent_train_vec = transform_to_latent_vec_obj.get_all_latent_vec() # use the cluster centers to find a point
     train_maxpool_indices = transform_to_latent_vec_obj.get_maxpool_indices()
 
-    # transform_to_latent_vec_obj.cal_latent_vec(dataloader=load_data_obj.get_validation_dataloader())
-    # all_latent_val_vec = transform_to_latent_vec_obj.get_all_latent_vec()
+    transform_to_latent_vec_obj.cal_latent_vec(dataloader=load_data_obj.get_validation_dataloader())
+    all_latent_val_vec = transform_to_latent_vec_obj.get_all_latent_vec()
+    val_maxpool_indices = transform_to_latent_vec_obj.get_maxpool_indices()
 
     transform_to_latent_vec_obj.cal_test_latent_vec(test_dataloader=load_data_obj.get_test_dataloader())
     all_latent_test_vec, test_labels = transform_to_latent_vec_obj.get_test_vec_data()
+    test_maxpool_indices = transform_to_latent_vec_obj.get_test_maxpool_indices()
 
-    clustering_obj.clustering_fit(all_latent_vec=all_latent_train_vec)
+    num_latent_test_vec = len(all_latent_test_vec)
+    num_latent_train_vec = len(all_latent_train_vec)
+    num_latent_val_vec = len(all_latent_val_vec)
+    all_latent_vec = torch.vstack((all_latent_train_vec, all_latent_val_vec))
+    maxpool_indices = torch.vstack((train_maxpool_indices, val_maxpool_indices))
+    del all_latent_train_vec
+    del all_latent_val_vec
+    del all_latent_test_vec
+    del train_maxpool_indices
+    del val_maxpool_indices
+    del test_maxpool_indices
+    print(f'Number of test latent vec: {num_latent_test_vec}, The shape of all latent vec : {all_latent_vec.shape} ')
+
+    clustering_obj.clustering_fit(all_latent_vec=all_latent_vec)
     pred_labels = clustering_obj.get_pred_labels()
     label_point_idx_map = {}
     for idx, label in enumerate(pred_labels):
         value = label_point_idx_map.get(label, [])
         value.append(idx)
         label_point_idx_map[label] = value
-    plot_graph_obj.draw_tsne(all_latent_vec=all_latent_train_vec,
-                             label_point_idx_map=label_point_idx_map)
+    plot_graph_obj.draw_tsne(all_latent_vec=all_latent_vec,
+                             label_point_idx_map=None)#label_point_idx_map)
 
-    eva_cluster_obj = EvaluateClustering(Clustering=Clustering,
-                                         all_latent_vec=all_latent_train_vec,
-                                         true_labels=[])
-
-    eva_cluster_obj.cal_sil_score_range(start=2, end=25, step=1)
-    sil_score_list = eva_cluster_obj.get_sil_score_list()
-    print(f'The silhouette score list is: {sil_score_list}')
-    eva_cluster_obj.draw_sil_score_list()
+    # eva_cluster_obj = EvaluateClustering(Clustering=Clustering,
+    #                                      all_latent_vec=all_latent_vec,
+    #                                      true_labels=[])
+    #
+    # eva_cluster_obj.cal_sil_score_range(start=2, end=25, step=1)
+    # sil_score_list = eva_cluster_obj.get_sil_score_list()
+    # print(f'The silhouette score list is: {sil_score_list}')
+    # eva_cluster_obj.draw_sil_score_list()
 
     cluster_centroids_idx = {}
     for idx, label in enumerate(pred_labels):
         cluster_centroids_idx[label] = idx
 
-    label_correc_obj = LabelCorrection(decoder=decoder, maxpool_indices_array=train_maxpool_indices, device='cuda')
-    label_correc_obj.dis_cluster_centroid(all_latent_vec=all_latent_train_vec,
+    label_correc_obj = LabelCorrection(decoder=decoder, maxpool_indices_array=maxpool_indices, device='cuda')
+    label_correc_obj.dis_cluster_centroid(all_latent_vec=all_latent_vec,
                                           cluster_centroid_idx=cluster_centroids_idx)
     label_map = label_correc_obj.get_label_map()
 
     true_labels = [label_map[int(label)] for label in test_labels]
 
     eva_cluster_obj = EvaluateClustering(Clustering=Clustering,
-                                         all_latent_vec=all_latent_test_vec,
+                                         all_latent_vec=all_latent_vec,
                                          true_labels=true_labels)
     eva_cluster_obj.cal_vmeasure_score(no_cluster=10)
     vmeasure_score = eva_cluster_obj.get_vmeasure_score()

@@ -197,7 +197,7 @@ class LatentVecConversion:
 
     def cal_latent_vec(self, dataloader):
         all_latent_vec = torch.zeros((1, 64), dtype=torch.float64).to(self.device)
-        self.maxpool_indices_array = torch.zeros((1, 20, 12, 12), dtype=torch.int64).to(self.device)
+        self.maxpool_indices_array = torch.zeros((1, 30, 11, 11), dtype=torch.int64).to(self.device)
         encoder = self.model.get_encoder()
         for data_batch in dataloader:
             # data_batch = data_batch.double()
@@ -209,13 +209,13 @@ class LatentVecConversion:
             latent_vec = torch.flatten(output, 1).detach()
             all_latent_vec = torch.vstack((all_latent_vec, latent_vec))
             self.maxpool_indices_array = torch.vstack((self.maxpool_indices_array, maxpool_indices))
-        self.all_latent_vec = all_latent_vec[1:, :].cpu().numpy()
+        self.all_latent_vec = all_latent_vec[1:, :].cpu()# .numpy()
         self.maxpool_indices_array = self.maxpool_indices_array[1:].cpu()
 
     def cal_test_latent_vec(self, test_dataloader):
         self.test_labels = []
         all_test_latent_vec = torch.zeros((1, 64), dtype=torch.float64).to(self.device)
-        self.test_maxpool_indices_array = torch.zeros((1, 20, 12, 12), dtype=torch.int64).to(self.device)
+        self.test_maxpool_indices_array = torch.zeros((1, 30, 11, 11), dtype=torch.int64).to(self.device)
         encoder = self.model.get_encoder()
         for data_batch, label in test_dataloader:
             self.test_labels += label.tolist()
@@ -226,7 +226,7 @@ class LatentVecConversion:
             latent_vec = torch.flatten(output, 1).detach()
             all_test_latent_vec = torch.vstack((all_test_latent_vec, latent_vec))
             self.test_maxpool_indices_array = torch.vstack((self.maxpool_indices_array, maxpool_indices.cpu()))
-        self.all_test_latent_vec = all_test_latent_vec[1:, :].cpu().numpy()
+        self.all_test_latent_vec = all_test_latent_vec[1:, :].cpu() # .numpy()
         self.test_maxpool_indices_array = self.maxpool_indices_array[1:].cpu()
 
     def get_all_latent_vec(self):

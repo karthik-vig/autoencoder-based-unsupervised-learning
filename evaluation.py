@@ -165,7 +165,7 @@ class LabelCorrection:
         for cluster_label, centroid_idx in cluster_centroid_idx.items():
             centroid_features = all_latent_vec[centroid_idx]
             decoder_input = self.unflatten(centroid_features)
-            maxpool_idx = self.maxpool_indices_array[centroid_idx].reshape(1, 20, 12, 12)
+            maxpool_idx = self.maxpool_indices_array[centroid_idx].reshape(1, 30, 11, 11)
             img_tensor = self.decoder(decoder_input.to(self.device),
                                       maxpool_idx)
             img_tensor = img_tensor[0].cpu()
