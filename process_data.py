@@ -186,18 +186,23 @@ class SaveLoadAutoencoderModel:
 
 
 class LatentVecConversion:
-    def __init__(self, device, model):
+    def __init__(self, device, latent_dim):
         self.device = device
-        self.model = model.to(self.device).double()
+        self.model = None
         self.all_latent_vec = None
         self.all_test_latent_vec = None
         self.maxpool_indices_array = None
         self.test_maxpool_indices_array = None
         self.test_labels = []
+        self.latent_dim = latent_dim
+
+    def set_model(self, model):
+        self.model = model.to(self.device).double()
 
     def cal_latent_vec(self, dataloader):
-        all_latent_vec = torch.zeros((1, 64), dtype=torch.float64).to(self.device)
-        self.maxpool_indices_array = torch.zeros((1, 20, 12, 12), dtype=torch.int64).to(self.device)
+        print(f'Calculating Latent vector')
+        all_latent_vec = torch.zeros((1, self.latent_dim), dtype=torch.float64).to(self.device)
+        self.maxpool_indices_array = torch.zeros((1, 30, 11, 11), dtype=torch.int64).to(self.device)
         encoder = self.model.get_encoder()
         for data_batch in dataloader:
             # data_batch = data_batch.double()
@@ -213,9 +218,10 @@ class LatentVecConversion:
         self.maxpool_indices_array = self.maxpool_indices_array[1:].cpu()
 
     def cal_test_latent_vec(self, test_dataloader):
+        print(f'Calculating test latent vec')
         self.test_labels = []
-        all_test_latent_vec = torch.zeros((1, 64), dtype=torch.float64).to(self.device)
-        self.test_maxpool_indices_array = torch.zeros((1, 20, 12, 12), dtype=torch.int64).to(self.device)
+        all_test_latent_vec = torch.zeros((1, self.latent_dim), dtype=torch.float64).to(self.device)
+        self.test_maxpool_indices_array = torch.zeros((1, 30, 11, 11), dtype=torch.int64).to(self.device)
         encoder = self.model.get_encoder()
         for data_batch, label in test_dataloader:
             self.test_labels += label.tolist()

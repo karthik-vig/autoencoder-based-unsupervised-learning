@@ -92,18 +92,20 @@ class PlotAutoencoderGraph:
 
 
 class EvaluateClustering:
-    def __init__(self, Clustering, all_latent_vec, true_labels):
+    def __init__(self, Clustering):
         self.Clustering = Clustering
         self.clustering_obj = None
-        self.all_latent_vec = all_latent_vec
+        self.all_latent_vec = None
         self.sil_score = None
         self.sil_score_list = []
         self.vmeasure_score = None
         self.vmeasure_score_list = []
         self.distortion = None
         self.distortion_list = []
-        self.true_labels = true_labels
         self._create_dir()
+
+    def set_all_latent_vec(self, all_latent_vec):
+        self.all_latent_vec = all_latent_vec
 
     def _create_dir(self):
         dir_list = os.listdir('./')
@@ -124,23 +126,17 @@ class EvaluateClustering:
         pred_labels = self.clustering_obj.get_pred_labels()
         self.sil_score = silhouette_score(self.all_latent_vec, pred_labels)
 
-    def cal_vmeasure_score(self, no_cluster):
+    def cal_vmeasure_score(self, no_cluster, true_labels):
         self._cal_fitted_cluster_model(no_cluster=no_cluster)
         self.clustering_obj.clustering_predict(all_latent_vec=self.all_latent_vec)
         pred_labels = self.clustering_obj.get_pred_labels()
-        self.vmeasure_score = v_measure_score(labels_true=self.true_labels, labels_pred=pred_labels)
+        self.vmeasure_score = v_measure_score(labels_true=true_labels, labels_pred=pred_labels)
 
     def cal_sil_score_range(self, start, end, step):
         self.sil_score_list = []
         for no_cluster in range(start, end + 1, step):
             self.cal_sil_score(no_cluster=no_cluster)
             self.sil_score_list.append((no_cluster, self.get_sil_score()))
-
-    # def cal_vmeasure_score_range(self, start, end, step):
-    #     self.vmeasure_score_list = []
-    #     for no_cluster in range(start, end, step):
-    #         self.cal_vmeasure_score(no_cluster=no_cluster)
-    #         self.vmeasure_score_list.append((no_cluster, self.get_vmeasure_score()))
 
     def cal_distortion_range(self, start, end, step):
         self.distortion_list = []
@@ -159,18 +155,6 @@ class EvaluateClustering:
         plt.ylabel('Silhouette Score')
         plt.savefig(fname='./figures/sil_score.png')
         plt.show()
-
-    # def draw_vmeasure_score_list(self):
-    #     if len(self.vmeasure_score_list) == 0:
-    #         raise Exception('V-measure score not calculated')
-    #     plt.close()
-    #     plt.figure(figsize=(20, 15), dpi=100)
-    #     vmeasure_score_array = np.array(self.vmeasure_score_list)
-    #     plt.plot(vmeasure_score_array[:, 0], vmeasure_score_array[:, 1])
-    #     plt.xlabel('Number of Clusters')
-    #     plt.ylabel('V-measure Score')
-    #     plt.savefig(fname=f'./figures/v_measure_score.png')
-    #     plt.show()
 
     def draw_distortion_list(self):
         plt.close()
@@ -191,9 +175,6 @@ class EvaluateClustering:
     def get_vmeasure_score(self):
         return self.vmeasure_score
 
-    # def get_vmeasure_score_list(self):
-    #     return self.vmeasure_score_list
-
     def get_distortion(self):
         return self.distortion
 
@@ -202,12 +183,19 @@ class EvaluateClustering:
 
 
 class LabelCorrection:
-    def __init__(self, decoder, maxpool_indices_array, device):
+    def __init__(self, device, latent_dim):
         self.device = device
-        self.maxpool_indices_array = maxpool_indices_array.to(self.device)
-        self.decoder = decoder.to(self.device).double()
-        self.unflatten = torch.nn.Unflatten(dim=0, unflattened_size=(1, 64))
+        self.latent_dim = latent_dim
+        self.maxpool_indices_array = None
+        self.decoder = None
+        self.unflatten = torch.nn.Unflatten(dim=0, unflattened_size=(1, self.latent_dim))
         self.label_map = {}
+
+    def set_decoder(self, decoder):
+        self.decoder = decoder.to(self.device).double()
+
+    def set_maxpool_indices(self, maxpool_indices_array):
+        self.maxpool_indices_array = maxpool_indices_array.to(self.device)
 
     def dis_cluster_centroid(self, all_latent_vec, cluster_centroid_idx):
         self.label_map = {}
@@ -215,7 +203,7 @@ class LabelCorrection:
         for cluster_label, centroid_idx in cluster_centroid_idx.items():
             centroid_features = all_latent_vec[centroid_idx]
             decoder_input = self.unflatten(centroid_features)
-            maxpool_idx = self.maxpool_indices_array[centroid_idx].reshape(1, 20, 12, 12)
+            maxpool_idx = self.maxpool_indices_array[centroid_idx].reshape(1, 30, 11, 11)
             img_tensor = self.decoder(decoder_input.to(self.device),
                                       maxpool_idx)
             img_tensor = img_tensor[0].cpu()

@@ -8,14 +8,20 @@ from sklearn.cluster  import KMeans
 # autoencoder model:
 
 # encoder:
+# autoencoder model:
+
+# encoder:
 class ConvEncoder(nn.Module):
     def __init__(self, latent_dims):
         super(ConvEncoder, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=3, stride=1, padding=0)
         self.conv2 = nn.Conv2d(in_channels=10, out_channels=20, kernel_size=3, stride=1, padding=0)
-        self.maxPool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0, return_indices=True)
-        self.linear1 = nn.Linear(in_features=20 * 12 * 12, out_features=1024)
-        self.linear2 = nn.Linear(in_features=1024, out_features=latent_dims)
+        self.conv3 = nn.Conv2d(in_channels=20, out_channels=30, kernel_size=3, stride=1, padding=0)
+        self.maxPool = nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
+        self.linear1 = nn.Linear(in_features=30 * 11 * 11, out_features=1024)
+        self.linear2 = nn.Linear(in_features=1024, out_features=512)
+        self.linear3 = nn.Linear(in_features=512, out_features=256)
+        self.linear4 = nn.Linear(in_features=256, out_features=latent_dims)
         self.maxpool_indices = None
 
     def forward(self, input):
@@ -23,11 +29,17 @@ class ConvEncoder(nn.Module):
         x = Func.relu(x)
         x = self.conv2(x)
         x = Func.relu(x)
+        x = self.conv3(x)
+        x = Func.relu(x)
         x, self.maxpool_indices = self.maxPool(x)
         x = torch.flatten(x, 1)
         x = self.linear1(x)
         x = Func.relu(x)
-        x= self.linear2(x)
+        x = self.linear2(x)
+        x = Func.relu(x)
+        x = self.linear3(x)
+        x = Func.relu(x)
+        x = self.linear4(x)
         return x
 
     def get_maxpool_indices(self):
@@ -38,23 +50,32 @@ class ConvEncoder(nn.Module):
 class ConvDecoder(nn.Module):
     def __init__(self, latent_dims):
         super(ConvDecoder, self).__init__()
-        self.linear1 = nn.Linear(in_features=latent_dims, out_features=1024)
-        self.linear2 = nn.Linear(in_features=1024, out_features=20 * 12 * 12)
-        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(20, 12, 12))
-        self.deconv1 = nn.ConvTranspose2d(in_channels=20, out_channels=10, kernel_size=3, stride=1, padding=0, output_padding=0)
-        self.deconv2 = nn.ConvTranspose2d(in_channels=10, out_channels=3, kernel_size=3, stride=1, padding=0, output_padding=0)
+        self.linear1 = nn.Linear(in_features=latent_dims, out_features=256)
+        self.linear2 = nn.Linear(in_features=256, out_features=512)
+        self.linear3 = nn.Linear(in_features=512, out_features=1024)
+        self.linear4 = nn.Linear(in_features=1024, out_features=30 * 11 * 11)
+        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(30, 11, 11))
         self.invMaxPool = nn.MaxUnpool2d(kernel_size=2, stride=2, padding=0)
+        self.deconv1 = nn.ConvTranspose2d(in_channels=30, out_channels=20, kernel_size=3, stride=1, padding=0, output_padding=0)
+        self.deconv2 = nn.ConvTranspose2d(in_channels=20, out_channels=10, kernel_size=3, stride=1, padding=0, output_padding=0)
+        self.deconv3 = nn.ConvTranspose2d(in_channels=10, out_channels=3, kernel_size=3, stride=1, padding=0, output_padding=0)
 
     def forward(self, latent_vector, maxpool_indices):
         x = self.linear1(latent_vector)
         x = Func.relu(x)
         x = self.linear2(x)
         x = Func.relu(x)
+        x = self.linear3(x)
+        x = Func.relu(x)
+        x = self.linear4(x)
+        x = Func.relu(x)
         x = self.unflatten(x)
         x = self.invMaxPool(x, maxpool_indices)
         x = self.deconv1(x)
         x = Func.relu(x)
         x = self.deconv2(x)
+        x = Func.relu(x)
+        x = self.deconv3(x)
         x = torch.sigmoid(x)
         return x
 
