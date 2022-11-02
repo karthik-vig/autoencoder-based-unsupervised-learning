@@ -1,3 +1,5 @@
+import os
+
 import torch.nn as nn
 import torch.optim as optim
 
@@ -12,7 +14,7 @@ from process_data import LoadData, TrainAutoencoder, SaveLoadAutoencoderModel, L
 # from joblib import Memory
 
 class Execute:
-    def __init__(self, **kwargs):
+    def __init__(self, kwargs):
         self.autoencoder_model = Autoencoder(latent_dims=kwargs['latent_dim'])
         self.autoencoder_adam_optimizer = optim.Adam(self.autoencoder_model.parameters(), lr=kwargs['lr'])
         self.mse_loss_func = nn.MSELoss()
@@ -40,12 +42,12 @@ class Execute:
 
         self.clustering_obj = Clustering(no_cluster=kwargs['num_cluster'])
 
-        self.transform_to_latent_vec_obj = LatentVecConversion(device='cuda', latent_dim=kwargs['latent_dim'])
+        self.transform_to_latent_vec_obj = LatentVecConversion(device=kwargs['device'], latent_dim=kwargs['latent_dim'])
 
         self.eva_cluster_obj = EvaluateClustering(Clustering=Clustering)
 
-        self.label_correc_obj = LabelCorrection(device='cuda',
-                                                latent_dim=64)
+        self.label_correc_obj = LabelCorrection(device=kwargs['device'],
+                                                latent_dim=kwargs['latent_dim'])
 
         self.latent_dim = kwargs['latent_dim']
         self.model_data = None
@@ -140,13 +142,14 @@ class Execute:
         self.eva_cluster_obj.set_all_latent_vec(all_latent_vec=all_latent_test_vec)
         self.eva_cluster_obj.cal_vmeasure_score(no_cluster=no_cluster, true_labels=true_labels)
 
-    def execute_input(self, mode, **kwargs):
-        if mode == 'train_model':
-            # train autoencoder
-            self.execute_train_autoencoder(start_epoch=kwargs['start_epoch'],
+    def execute_input(self, mode, kwargs):
+        if mode == 'train_autoencoder':
+            self.execute_train_autoencoder(start_epoch=1,
                                            end_epoch=kwargs['end_epoch'])
-            # train clustering model
+
+        elif mode == 'train_cluster':
             self.execute_train_cluster_model(select_model=kwargs['select_auto_model_clustering'])
+            print(f'The predicted training dataset labels are : {self.train_pred_labels}')
 
         elif mode == 'eva_autoencoder':
             self.execute_eva_autoencoder(select_model=kwargs['select_auto_model_eva'])
@@ -168,13 +171,111 @@ class Execute:
                               no_cluster=kwargs['vmeasure_num_cluster'])
 
 
+def select_autoencoder_model():
+    file_name_list = os.listdir('./autoencoder_models/')
+    file_name_list.sort()
+    for idx, file_name in enumerate(file_name_list, 1):
+        print(f'{idx}) {file_name}')
+    input_val = int(input('Which autoencoder model to user for train cluster model? : '))
+    if input_val <= 0 or input_val > len(file_name_list):
+        return None
+    return input_val - 1
+
+
+def user_train_auto_input():
+    user_train_auto_input_map = {'end_epcoh': int(input('Enter the number of epochs: '))}
+    return user_train_auto_input_map
+
+
+def user_train_cluser_input():
+    user_train_cluser_input_map = {'select_auto_model_clustering': select_autoencoder_model()}
+    return user_train_cluser_input_map
+
+
+def user_eva_autoencoder_input():
+    user_eva_autoencoder_input_map = {'select_auto_model_eva': select_autoencoder_model()}
+    return user_eva_autoencoder_input_map
+
+
+def user_cal_sil_input():
+    user_cal_sil_input_map = {'select_cluster_model_sil': select_autoencoder_model(),
+                              'cluster_sil_start': int(input('Enter the start number of cluster: ')),
+                              'cluster_sil_end': int(input('Enter the end number of cluster: ')),
+                              'cluster_sil_step': int(input('Enter the step to increase number of clusters: '))}
+    return user_cal_sil_input_map
+
+
+def user_cal_dis_input():
+    user_cal_dis_input_map = {'select_cluster_model_dis': select_autoencoder_model(),
+                              'cluster_dis_start': int(input('Enter the start number of cluster: ')),
+                              'cluster_dis_end': int(input('Enter the end number of cluster: ')),
+                              'cluster_dis_step': int(input('Enter the step to increase number of clusters: '))}
+    return user_cal_dis_input_map
+
+
+def user_cal_vmeasure_input():
+    user_cal_vmeasure_input_map = {'select_cluster_model_vmeasure': select_autoencoder_model(),
+                                   'vmeasure_num_cluster': int(input('Enter the number of clusters: '))}
+    return user_cal_vmeasure_input_map
+
+
 def user_input():
-    pass
+    user_input_value = {}
+    setup_info = {}
+    mode_map = {1: 'train_autoencoder',
+                2: 'train_cluster',
+                3: 'eva_autoencoder',
+                4: 'cal_sil',
+                5: 'cal_distortion',
+                6: 'cal_vmeasure'}
+    print('Enter Setup information: ')
+    setup_info['latent_dim'] = int(input('Enter the latent vector dimension: '))
+    setup_info['lr'] = float(input('Etner the lr: '))
+    setup_info['batch_size'] = int(input('Etner the batch size: '))
+    setup_info['img_dim'] = (int(input('Etner the image dimensions 1: ')), int(input('Enter image dimension 2: ')))
+    setup_info['device'] = input('Etner the device (cpu/cuda): ')
+    setup_info['num_cluster'] = int(input('Enter the number of clusters: '))
+    curr_dir = os.path.dirname(os.path.abspath(__file__))
+    curr_dir = curr_dir.replace("""\\""", """/""")
+    setup_info['train_dataset_loc'] = curr_dir + '/data/train_dataset'
+    setup_info['test_dataset_loc'] = curr_dir + '/data/test_dataset'
+    # print(setup_info)
+    print('Enter Mode: ')
+    for key, value in mode_map.items():
+        print(f'{key}) {value}')
+    mode_input = int(input('Choose any one option or enter random number to exit: '))
+    if mode_input <= 0 or mode_input > len(mode_map):
+        return None
+    mode_input = mode_map[mode_input]
+    if mode_input == 'train_autoencoder':
+        user_input_value['execution_info'] = user_train_auto_input()
+    elif mode_input == 'train_cluster':
+        user_input_value['execution_info'] = user_train_cluser_input()
+    elif mode_input == 'eva_autoencoder':
+        user_input_value['execution_info'] = user_eva_autoencoder_input()
+    elif mode_input == 'cal_sil':
+        user_input_value['execution_info'] = user_cal_sil_input()
+    elif mode_input == 'cal_distortion':
+        user_input_value['execution_info'] = user_cal_dis_input()
+    elif mode_input == 'cal_vmeasure':
+        user_input_value['execution_info'] = user_cal_vmeasure_input()
+    user_input_value['setup_info'] = setup_info
+    user_input_value['mode'] = mode_input
+    return user_input_value
+
+
+def main():
+    user_input_value = user_input()
+    if not user_input_value:
+        return None
+    exe_obj = Execute(kwargs=user_input_value['setup_info'])
+    exe_obj.execute_input(mode=user_input_value['mode'],
+                          kwargs=user_input_value['execution_info'])
 
 
 if __name__ == "__main__":
-
-    pass
+    main()
+    # pass
 
     # # cache_dir = './cache/'
     # # mem = Memory(location=cache_dir)
