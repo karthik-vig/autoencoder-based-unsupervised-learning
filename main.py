@@ -95,6 +95,13 @@ class Execute:
         self.clustering_obj.clustering_fit(all_latent_vec=self.all_latent_train_vec)
         self.clustering_obj.clustering_predict(all_latent_vec=self.all_latent_train_vec)
         self.train_pred_labels = self.clustering_obj.get_pred_labels()
+        label_point_idx_map = {}
+        for idx, label in enumerate(self.train_pred_labels):
+            value = label_point_idx_map.get(label, [])
+            value.append(idx)
+            label_point_idx_map[label] = value
+        self.plot_graph_obj.draw_tsne(all_latent_vec=self.all_latent_train_vec,
+                                      label_point_idx_map=label_point_idx_map)
 
     def execute_eva_autoencoder(self, select_model):
         train_loss, test_loss, no_epochs = self.save_load_autoencoder_obj.get_model_data()
@@ -128,8 +135,11 @@ class Execute:
 
     def cal_vmeasure(self, select_model, no_cluster):
         self.cal_latent_vec_for_model(select_model=select_model)
-        self.label_correc_obj.set_decoder(decoder=self.model.get_encoder())
+        model = self.model_data['model']
+        self.label_correc_obj.set_decoder(decoder=model.get_decoder())
         self.label_correc_obj.set_maxpool_indices(maxpool_indices_array=self.train_maxpool_indices)
+        self.cal_latent_vec_for_model(select_model=select_model)
+        self.clustering_obj.clustering_fit(all_latent_vec=self.all_latent_train_vec)
         self.clustering_obj.cal_cluster_centroid(all_latent_vec=self.all_latent_train_vec)
         cluster_centroids_idx = self.clustering_obj.get_cluster_centroid()
         print(f'The index of latent vector, who are cluster centroids: {cluster_centroids_idx}')
@@ -141,6 +151,8 @@ class Execute:
         true_labels = [label_map[int(label)] for label in test_labels]
         self.eva_cluster_obj.set_all_latent_vec(all_latent_vec=all_latent_test_vec)
         self.eva_cluster_obj.cal_vmeasure_score(no_cluster=no_cluster, true_labels=true_labels)
+        v_score = self.eva_cluster_obj.get_vmeasure_score()
+        print(f'The v-measure score is: {v_score}')
 
     def execute_input(self, mode, kwargs):
         if mode == 'train_autoencoder':
@@ -230,10 +242,10 @@ def user_input():
                 6: 'cal_vmeasure'}
     print('Enter Setup information: ')
     setup_info['latent_dim'] = int(input('Enter the latent vector dimension: '))
-    setup_info['lr'] = float(input('Etner the lr: '))
-    setup_info['batch_size'] = int(input('Etner the batch size: '))
-    setup_info['img_dim'] = (int(input('Etner the image dimensions 1: ')), int(input('Enter image dimension 2: ')))
-    setup_info['device'] = input('Etner the device (cpu/cuda): ')
+    setup_info['lr'] = float(input('Enter the lr: '))
+    setup_info['batch_size'] = int(input('Enter the batch size: '))
+    setup_info['img_dim'] = (int(input('Enter the image dimensions 1: ')), int(input('Enter image dimension 2: ')))
+    setup_info['device'] = input('Enter the device (cpu/cuda): ')
     setup_info['num_cluster'] = int(input('Enter the number of clusters: '))
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     curr_dir = curr_dir.replace("""\\""", """/""")
