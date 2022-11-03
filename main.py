@@ -199,7 +199,7 @@ def select_autoencoder_model():
 
 
 def user_train_auto_input():
-    user_train_auto_input_map = {'end_epcoh': int(input('Enter the number of epochs: '))}
+    user_train_auto_input_map = {'end_epoch': int(input('Enter the number of epochs: '))}
     return user_train_auto_input_map
 
 
