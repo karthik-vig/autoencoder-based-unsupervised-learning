@@ -200,7 +200,9 @@ class LabelCorrection:
     def dis_cluster_centroid(self, all_latent_vec, cluster_centroid_idx):
         self.label_map = {}
         all_latent_vec = torch.tensor(all_latent_vec, dtype=torch.float64)
-        for cluster_label, centroid_idx in cluster_centroid_idx.items():
+        plt.ion()
+        fig, ax = plt.subplots(1, len(cluster_centroid_idx), figsize=(15, 8))
+        for idx, (cluster_label, centroid_idx) in enumerate(cluster_centroid_idx.items()):
             centroid_features = all_latent_vec[centroid_idx]
             decoder_input = self.unflatten(centroid_features)
             maxpool_idx = self.maxpool_indices_array[centroid_idx].reshape(1, 30, 11, 11)
@@ -210,11 +212,14 @@ class LabelCorrection:
             img_tensor = torch.transpose(img_tensor, 0, 2)
             img_tensor = torch.transpose(img_tensor, 0, 1)
             img_plt = img_tensor.detach().numpy()
-            plt.close()
-            plt.imshow(img_plt)
-            plt.show()
+            ax[idx].imshow(img_plt)
+            plt.pause(0.002)
+        plt.pause(2)
+        plt.show()
+        for cluster_label in cluster_centroid_idx.keys():
             true_label = int(input('Enter the label (0-9): '))
             self.label_map[true_label] = cluster_label
+        plt.ioff()
 
     def get_label_map(self):
         return self.label_map
