@@ -183,13 +183,14 @@ class EvaluateClustering:
 
 
 class LabelCorrection:
-    def __init__(self, device, latent_dim):
+    def __init__(self, device, latent_dim, maxpool_size):
         self.device = device
         self.latent_dim = latent_dim
         self.maxpool_indices_array = None
         self.decoder = None
         self.unflatten = torch.nn.Unflatten(dim=0, unflattened_size=(1, self.latent_dim))
         self.label_map = {}
+        self.maxpool_size = maxpool_size
 
     def set_decoder(self, decoder):
         self.decoder = decoder.to(self.device).double()
@@ -205,7 +206,7 @@ class LabelCorrection:
         for idx, (cluster_label, centroid_idx) in enumerate(cluster_centroid_idx.items()):
             centroid_features = all_latent_vec[centroid_idx]
             decoder_input = self.unflatten(centroid_features)
-            maxpool_idx = self.maxpool_indices_array[centroid_idx].reshape(1, 30, 11, 11)
+            maxpool_idx = self.maxpool_indices_array[centroid_idx].reshape(self.maxpool_size)
             img_tensor = self.decoder(decoder_input.to(self.device),
                                       maxpool_idx)
             img_tensor = img_tensor[0].cpu()

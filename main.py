@@ -1,3 +1,4 @@
+import json
 import os
 
 import torch.nn as nn
@@ -15,7 +16,7 @@ from process_data import LoadData, TrainAutoencoder, SaveLoadAutoencoderModel, L
 
 class Execute:
     def __init__(self, kwargs):
-        self.autoencoder_model = Autoencoder(latent_dims=kwargs['latent_dim'])
+        self.autoencoder_model = Autoencoder(latent_dims=kwargs['latent_dim'], autoencoder_setup=kwargs['autoencoder'])
         self.autoencoder_adam_optimizer = optim.Adam(self.autoencoder_model.parameters(), lr=kwargs['lr'])
         self.mse_loss_func = nn.MSELoss()
 
@@ -42,12 +43,14 @@ class Execute:
 
         self.clustering_obj = Clustering(no_cluster=kwargs['num_cluster'])
 
-        self.transform_to_latent_vec_obj = LatentVecConversion(device=kwargs['device'], latent_dim=kwargs['latent_dim'])
+        self.transform_to_latent_vec_obj = LatentVecConversion(device=kwargs['device'], latent_dim=kwargs['latent_dim'],
+                                                               maxpool_size=kwargs['maxpool_size'])
 
         self.eva_cluster_obj = EvaluateClustering(Clustering=Clustering)
 
         self.label_correc_obj = LabelCorrection(device=kwargs['device'],
-                                                latent_dim=kwargs['latent_dim'])
+                                                latent_dim=kwargs['latent_dim'],
+                                                maxpool_size=kwargs['maxpool_size'])
 
         self.latent_dim = kwargs['latent_dim']
         self.model_data = None
@@ -187,6 +190,67 @@ class Execute:
                               no_cluster=kwargs['vmeasure_num_cluster'])
 
 
+def get_setup_json():
+    setup_json = {'autoencoder': {'encoder': {'conv1': {'in_ch': 3,
+                                                        'out_ch': 10,
+                                                        'kernel_sz': 3,
+                                                        'stride': 1},
+                                              'conv2': {'in_ch': 10,
+                                                        'out_ch': 20,
+                                                        'kernel_sz': 3,
+                                                        'stride': 1},
+                                              'conv3': {'in_ch': 20,
+                                                        'out_ch': 30,
+                                                        'kernel_sz': 3,
+                                                        'stride': 1},
+                                              'pool': {'kernel_sz': 2,
+                                                       'stride': 2},
+                                              'ln1': {'in_feat': 30 * 11 * 11,
+                                                      'out_feat': 1024},
+                                              'ln2': {'in_feat': 1024,
+                                                      'out_feat': 512},
+                                              'ln3': {'in_feat': 512,
+                                                      'out_feat': 256},
+                                              'ln4': {'in_feat': 256}},
+                                  'decoder': {'ln1': {'out_feat': 256},
+                                              'ln2': {'in_feat': 256,
+                                                      'out_feat': 512},
+                                              'ln3': {'in_feat': 512,
+                                                      'out_feat': 1024},
+                                              'ln4': {'in_feat': 1024,
+                                                      'out_feat': 30 * 11 * 11},
+                                              'unflatten': {'sz': [30, 11, 11]},
+                                              'invpool': {'kernel_sz': 2,
+                                                          'stride': 2},
+                                              'deconv1': {'in_ch': 30,
+                                                          'out_ch': 20,
+                                                          'kernel_sz': 3,
+                                                          'stride': 1},
+                                              'deconv2': {'in_ch': 20,
+                                                          'out_ch': 10,
+                                                          'kernel_sz': 3,
+                                                          'stride': 1},
+                                              'deconv3': {'in_ch': 10,
+                                                          'out_ch': 3,
+                                                          'kernel_sz': 3,
+                                                          'stride': 1}}},
+                  'maxpool_size': [1, 30, 11, 11],
+                  'latent_dim': 100,
+                  'lr': 0.001,
+                  'batch_size': 128,
+                  'img_dim': [28, 28],
+                  'device': 'cuda',
+                  'num_cluster': 10
+                  }
+    if 'setup.json' in os.listdir('./'):
+        with open('setup.json', 'r') as json_file:
+            setup_json = json.load(json_file)
+    else:
+        with open('setup.json', 'w') as json_file:
+            json.dump(setup_json, json_file)
+    return setup_json
+
+
 def select_autoencoder_model():
     file_name_list = os.listdir('./autoencoder_models/')
     file_name_list.sort()
@@ -237,20 +301,20 @@ def user_cal_vmeasure_input():
 
 def user_input():
     user_input_value = {}
-    setup_info = {}
+    setup_info = get_setup_json()
     mode_map = {1: 'train_autoencoder',
                 2: 'train_cluster',
                 3: 'eva_autoencoder',
                 4: 'cal_sil',
                 5: 'cal_distortion',
                 6: 'cal_vmeasure'}
-    print('Enter Setup information: ')
-    setup_info['latent_dim'] = int(input('Enter the latent vector dimension: '))
-    setup_info['lr'] = float(input('Enter the lr: '))
-    setup_info['batch_size'] = int(input('Enter the batch size: '))
-    setup_info['img_dim'] = (int(input('Enter the image dimensions 1: ')), int(input('Enter image dimension 2: ')))
-    setup_info['device'] = input('Enter the device (cpu/cuda): ')
-    setup_info['num_cluster'] = int(input('Enter the number of clusters: '))
+    # print('Enter Setup information: ')
+    # setup_info['latent_dim'] = int(input('Enter the latent vector dimension: '))
+    # setup_info['lr'] = float(input('Enter the lr: '))
+    # setup_info['batch_size'] = int(input('Enter the batch size: '))
+    # setup_info['img_dim'] = (int(input('Enter the image dimensions 1: ')), int(input('Enter image dimension 2: ')))
+    # setup_info['device'] = input('Enter the device (cpu/cuda): ')
+    # setup_info['num_cluster'] = int(input('Enter the number of clusters: '))
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     curr_dir = curr_dir.replace("""\\""", """/""")
     setup_info['train_dataset_loc'] = curr_dir + '/data/train_dataset'
