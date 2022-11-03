@@ -60,7 +60,9 @@ class Execute:
         self.train_pred_labels = None
 
     def execute_train_autoencoder(self, start_epoch, end_epoch):
-        for epoch in range(start_epoch, end_epoch + 1):
+        num_digit = len(str(end_epoch))
+        end_epoch += 1
+        for epoch in range(start_epoch, end_epoch):
             # train model
             self.train_autoencoder_obj.train()
             model = self.train_autoencoder_obj.get_model()
@@ -69,7 +71,9 @@ class Execute:
             self.test_autoencoder_obj.test(model=model)
             test_loss = self.test_autoencoder_obj.get_test_loss()
             # create a structure to store model information as well as the meta-data associated with it
-            model_name = f'autoencoder_model_{epoch}.pt'
+            curr_num_digit = len(str(epoch))
+            zero_pad = '0' * (num_digit - curr_num_digit)
+            model_name = f'autoencoder_model_{zero_pad}{epoch}.pt'
             model_data = {'model': model,
                           'meta_data': {'train_loss': train_loss,
                                         'test_loss': test_loss}}
