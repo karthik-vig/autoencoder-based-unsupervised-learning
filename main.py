@@ -1,6 +1,8 @@
 import json
 import os
 
+import numpy as np
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
@@ -100,13 +102,14 @@ class Execute:
     def execute_train_cluster_model(self, select_model):
         self.cal_latent_vec_for_model(select_model=select_model)
         self.clustering_obj.clustering_fit(all_latent_vec=self.all_latent_train_vec)
-        self.clustering_obj.clustering_predict(all_latent_vec=self.all_latent_train_vec)
+        # self.clustering_obj.clustering_predict(all_latent_vec=self.all_latent_train_vec)
         self.train_pred_labels = self.clustering_obj.get_pred_labels()
         label_point_idx_map = {}
         for idx, label in enumerate(self.train_pred_labels):
             value = label_point_idx_map.get(label, [])
             value.append(idx)
             label_point_idx_map[label] = value
+        print(f'Number of clusters found: {len(label_point_idx_map)}, number of datapoints: {len(self.all_latent_train_vec)}, number of -1 labels: {np.count_nonzero(self.train_pred_labels == -1)}')
         self.plot_graph_obj.draw_tsne(all_latent_vec=self.all_latent_train_vec,
                                       label_point_idx_map=label_point_idx_map)
 
@@ -132,13 +135,13 @@ class Execute:
         print(f'The silhouette score list is: {sil_score_list}')
         self.eva_cluster_obj.draw_sil_score_list()
 
-    def cal_dis(self, select_model, start, end, step):
-        self.cal_latent_vec_for_model(select_model=select_model)
-        self.eva_cluster_obj.set_all_latent_vec(all_latent_vec=self.all_latent_train_vec)
-        self.eva_cluster_obj.cal_distortion_range(start=start, end=end, step=step)
-        distortion_list = self.eva_cluster_obj.get_distortion_list()
-        print(f'The distortion list is: {distortion_list}')
-        self.eva_cluster_obj.draw_distortion_list()
+    # def cal_dis(self, select_model, start, end, step):
+    #     self.cal_latent_vec_for_model(select_model=select_model)
+    #     self.eva_cluster_obj.set_all_latent_vec(all_latent_vec=self.all_latent_train_vec)
+    #     self.eva_cluster_obj.cal_distortion_range(start=start, end=end, step=step)
+    #     distortion_list = self.eva_cluster_obj.get_distortion_list()
+    #     print(f'The distortion list is: {distortion_list}')
+    #     self.eva_cluster_obj.draw_distortion_list()
 
     def cal_vmeasure(self, select_model, no_cluster):
         self.cal_latent_vec_for_model(select_model=select_model)
@@ -147,16 +150,20 @@ class Execute:
         self.label_correc_obj.set_maxpool_indices(maxpool_indices_array=self.train_maxpool_indices)
         self.cal_latent_vec_for_model(select_model=select_model)
         self.clustering_obj.clustering_fit(all_latent_vec=self.all_latent_train_vec)
-        self.clustering_obj.cal_cluster_centroid(all_latent_vec=self.all_latent_train_vec)
-        cluster_centroids_idx = self.clustering_obj.get_cluster_centroid()
-        print(f'The index of latent vector, who are cluster centroids: {cluster_centroids_idx}')
-        self.label_correc_obj.dis_cluster_centroid(all_latent_vec=self.all_latent_train_vec,
-                                                   cluster_centroid_idx=cluster_centroids_idx)
+        train_pred_labels = self.clustering_obj.get_pred_labels()
+        # self.clustering_obj.cal_cluster_centroid(all_latent_vec=self.all_latent_train_vec)
+        # cluster_centroids_idx = self.clustering_obj.get_cluster_centroid()
+        # print(f'The index of latent vector, who are cluster centroids: {cluster_centroids_idx}')
+        cluster_points_idx = { k:v for v, k in enumerate(train_pred_labels)}
+        cluster_points_idx.pop(-1)
+        self.label_correc_obj.dis_cluster_point(all_latent_vec=self.all_latent_train_vec,
+                                                cluster_points_idx=cluster_points_idx)
         label_map = self.label_correc_obj.get_label_map()
         self.transform_to_latent_vec_obj.cal_test_latent_vec(test_dataloader=self.load_data_obj.get_test_dataloader())
         all_latent_test_vec, test_labels = self.transform_to_latent_vec_obj.get_test_vec_data()
         true_labels = [label_map[int(label)] for label in test_labels]
-        self.eva_cluster_obj.set_all_latent_vec(all_latent_vec=all_latent_test_vec)
+        all_latent_vec = torch.vstack((self.all_latent_train_vec, all_latent_test_vec))
+        self.eva_cluster_obj.set_all_latent_vec(all_latent_vec=all_latent_vec)
         self.eva_cluster_obj.cal_vmeasure_score(no_cluster=no_cluster, true_labels=true_labels)
         v_score = self.eva_cluster_obj.get_vmeasure_score()
         print(f'The v-measure score is: {v_score}')

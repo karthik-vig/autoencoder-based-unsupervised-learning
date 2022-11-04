@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as Func
-from sklearn.cluster  import KMeans
+from sklearn.cluster  import OPTICS
 
 
 # autoencoder model:
@@ -124,44 +124,44 @@ class Clustering:
         self.no_cluster = no_cluster
         self.labels = None
         self.fitted_cluster_model = None
-        self.cluster_centroid_idx = {}
+        # self.cluster_centroid_idx = {}
 
     def clustering_fit(self, all_latent_vec):
-        cluster_obj = KMeans(n_clusters=self.no_cluster)
+        cluster_obj = OPTICS(max_eps=0.1, cluster_method='dbscan')
         self.fitted_cluster_model = cluster_obj.fit(all_latent_vec)
 
-    def clustering_predict(self, all_latent_vec):
-        self.labels = self.fitted_cluster_model.predict(all_latent_vec)
+    # def clustering_predict(self, all_latent_vec):
+    #     self.labels = self.fitted_cluster_model.predict(all_latent_vec)
 
     def get_pred_labels(self):
-        return self.labels
+        return self.fitted_cluster_model.labels_
 
-    def get_clustering_model(self):
-        return self.fitted_cluster_model
-
-    def get_distortion(self):
-        if self.fitted_cluster_model != None:
-            return self.fitted_cluster_model.inertia_
-        else:
-            return None
-
-    def get_cluster_centers(self):
-        if self.fitted_cluster_model != None:
-            return self.fitted_cluster_model.cluster_centers_
-        else:
-            return None
-
-    def cal_cluster_centroid(self, all_latent_vec):
-        self.cluster_centroid_idx = {}
-        cluster_centers = self.get_cluster_centers()
-        for cluster_label, cluster_cen in enumerate(cluster_centers):
-            distance = np.sqrt(np.sum(np.power(all_latent_vec - cluster_cen, 2), axis=1))
-            min_dist_idx = np.where(distance == np.min(distance))[0][0]
-            # print(f'min distance is: {np.min(distance)}')
-            self.cluster_centroid_idx[cluster_label] = min_dist_idx
-
-    def get_cluster_centroid(self):
-        return self.cluster_centroid_idx
+    # def get_clustering_model(self):
+    #     return self.fitted_cluster_model
+    #
+    # def get_distortion(self):
+    #     if self.fitted_cluster_model != None:
+    #         return self.fitted_cluster_model.inertia_
+    #     else:
+    #         return None
+    #
+    # def get_cluster_centers(self):
+    #     if self.fitted_cluster_model != None:
+    #         return self.fitted_cluster_model.cluster_centers_
+    #     else:
+    #         return None
+    #
+    # def cal_cluster_centroid(self, all_latent_vec):
+    #     self.cluster_centroid_idx = {}
+    #     cluster_centers = self.get_cluster_centers()
+    #     for cluster_label, cluster_cen in enumerate(cluster_centers):
+    #         distance = np.sqrt(np.sum(np.power(all_latent_vec - cluster_cen, 2), axis=1))
+    #         min_dist_idx = np.where(distance == np.min(distance))[0][0]
+    #         # print(f'min distance is: {np.min(distance)}')
+    #         self.cluster_centroid_idx[cluster_label] = min_dist_idx
+    #
+    # def get_cluster_centroid(self):
+    #     return self.cluster_centroid_idx
 
 
 
