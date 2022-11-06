@@ -10,15 +10,15 @@ from process_data import LoadData, TrainAutoencoder, SaveLoadAutoencoderModel, L
 
 
 class Execute:
-    def __init__(self, kwargs):
-        self.autoencoder_model = Autoencoder(latent_dims=kwargs['latent_dim'], autoencoder_setup=kwargs['autoencoder'])
-        self.autoencoder_adam_optimizer = optim.Adam(self.autoencoder_model.parameters(), lr=kwargs['lr'])
+    def __init__(self, setup_info):
+        self.autoencoder_model = Autoencoder(latent_dims=setup_info['latent_dim'], autoencoder_setup=setup_info['autoencoder'])
+        self.autoencoder_adam_optimizer = optim.Adam(self.autoencoder_model.parameters(), lr=setup_info['lr'])
         self.mse_loss_func = nn.MSELoss()
 
-        self.load_data_obj = LoadData(batch_size=kwargs['batch_size'],
-                                      image_dim=kwargs['img_dim'],
-                                      test_dataset_loc=kwargs['test_dataset_loc'],
-                                      train_dataset_loc=kwargs['train_dataset_loc'])
+        self.load_data_obj = LoadData(batch_size=setup_info['batch_size'],
+                                      image_dim=setup_info['img_dim'],
+                                      test_dataset_loc=setup_info['test_dataset_loc'],
+                                      train_dataset_loc=setup_info['train_dataset_loc'])
         self.load_data_obj.load_dataset()
         self.load_data_obj.create_dataloaders()
 
@@ -26,32 +26,29 @@ class Execute:
                                                       model=self.autoencoder_model,
                                                       loss_func=self.mse_loss_func,
                                                       optimizer=self.autoencoder_adam_optimizer,
-                                                      device=kwargs['device'])
+                                                      device=setup_info['device'])
 
         self.test_autoencoder_obj = ValidateAutoencoder(dataloader=self.load_data_obj.get_validation_dataloader(),
                                                         loss_func=self.mse_loss_func,
-                                                        device=kwargs['device'])
+                                                        device=setup_info['device'])
 
         self.save_load_autoencoder_obj = SaveLoadAutoencoderModel(file_dir='autoencoder_models')
 
-        self.plot_graph_obj = PlotAutoencoderGraph(device=kwargs['device'])
+        self.plot_graph_obj = PlotAutoencoderGraph(device=setup_info['device'])
 
-        self.clustering_obj = Clustering(no_cluster=kwargs['num_cluster'])
+        self.clustering_obj = Clustering(no_cluster=setup_info['num_cluster'])
 
-        self.transform_to_latent_vec_obj = LatentVecConversion(device=kwargs['device'], latent_dim=kwargs['latent_dim'],
-                                                               maxpool_size=kwargs['maxpool_size'])
+        self.transform_to_latent_vec_obj = LatentVecConversion(device=setup_info['device'], latent_dim=setup_info['latent_dim'],
+                                                               maxpool_size=setup_info['maxpool_size'])
 
         self.eva_cluster_obj = EvaluateClustering(Clustering=Clustering)
 
-        self.label_correc_obj = LabelCorrection(device=kwargs['device'],
-                                                latent_dim=kwargs['latent_dim'],
-                                                maxpool_size=kwargs['maxpool_size'])
+        self.label_correc_obj = LabelCorrection(device=setup_info['device'],
+                                                latent_dim=setup_info['latent_dim'],
+                                                maxpool_size=setup_info['maxpool_size'])
 
-        self.latent_dim = kwargs['latent_dim']
+        self.latent_dim = setup_info['latent_dim']
         self.model_data = None
-        # self.model = None
-        # self.encoder = None
-        # self.decoder = None
         self.all_latent_train_vec_model_num = None
         self.all_latent_train_vec = None
         self.train_maxpool_indices = None
@@ -156,33 +153,33 @@ class Execute:
         v_score = self.eva_cluster_obj.get_vmeasure_score()
         print(f'The v-measure score is: {v_score}')
 
-    def execute_input(self, mode, kwargs):
+    def execute_input(self, mode, execution_info):
         if mode == 'train_autoencoder':
             self.execute_train_autoencoder(start_epoch=1,
-                                           end_epoch=kwargs['end_epoch'])
+                                           end_epoch=execution_info['end_epoch'])
 
         elif mode == 'train_cluster':
-            self.execute_train_cluster_model(select_model=kwargs['select_auto_model_clustering'])
+            self.execute_train_cluster_model(select_model=execution_info['select_auto_model_clustering'])
             print(f'The predicted training dataset labels are : {self.train_pred_labels}')
 
         elif mode == 'eva_autoencoder':
-            self.execute_eva_autoencoder(select_model=kwargs['select_auto_model_eva'])
+            self.execute_eva_autoencoder(select_model=execution_info['select_auto_model_eva'])
 
         elif mode == 'cal_sil':
-            self.cal_sil(select_model=kwargs['select_cluster_model_sil'],
-                         start=kwargs['cluster_sil_start'],
-                         end=kwargs['cluster_sil_end'],
-                         step=kwargs['cluster_sil_step'])
+            self.cal_sil(select_model=execution_info['select_cluster_model_sil'],
+                         start=execution_info['cluster_sil_start'],
+                         end=execution_info['cluster_sil_end'],
+                         step=execution_info['cluster_sil_step'])
 
         elif mode == 'cal_distortion':
-            self.cal_dis(select_model=kwargs['select_cluster_model_dis'],
-                         start=kwargs['cluster_dis_start'],
-                         end=kwargs['cluster_dis_end'],
-                         step=kwargs['cluster_dis_step'])
+            self.cal_dis(select_model=execution_info['select_cluster_model_dis'],
+                         start=execution_info['cluster_dis_start'],
+                         end=execution_info['cluster_dis_end'],
+                         step=execution_info['cluster_dis_step'])
 
         elif mode == 'cal_vmeasure':
-            self.cal_vmeasure(select_model=kwargs['select_cluster_model_vmeasure'],
-                              no_cluster=kwargs['vmeasure_num_cluster'])
+            self.cal_vmeasure(select_model=execution_info['select_cluster_model_vmeasure'],
+                              no_cluster=execution_info['vmeasure_num_cluster'])
 
 
 def get_setup_json():
@@ -338,9 +335,9 @@ def main():
     user_input_value = user_input()
     if not user_input_value:
         return None
-    exe_obj = Execute(kwargs=user_input_value['setup_info'])
+    exe_obj = Execute(setup_info=user_input_value['setup_info'])
     exe_obj.execute_input(mode=user_input_value['mode'],
-                          kwargs=user_input_value['execution_info'])
+                          execution_info=user_input_value['execution_info'])
 
 
 if __name__ == "__main__":
