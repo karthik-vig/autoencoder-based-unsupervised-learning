@@ -1,7 +1,7 @@
 import os
 
-import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from sklearn.manifold import TSNE
@@ -19,7 +19,6 @@ class ValidateAutoencoder:
         model = model.to(self.device).double()
         self.tot_test_loss = 0
         for data_batch in self.dataloader:
-            # data_batch = data_batch.double()
             data_batch = data_batch.to(self.device)
             output = model(data_batch)
             loss = self.loss_func(output, data_batch)
@@ -63,7 +62,6 @@ class PlotAutoencoderGraph:
         for idx, data_batch in enumerate(dataloader):
             if idx == 5:
                 break
-            # data_batch = data_batch.double()
             data_batch = data_batch.to(self.device)
             output = model(data_batch)
             original_img = self._convert_to_plt_image(img_tensor=data_batch[0])
@@ -82,9 +80,9 @@ class PlotAutoencoderGraph:
         plt.figure(figsize=(20, 15), dpi=100)
         if label_point_idx_map:
             num_cluster = len(label_point_idx_map)
-            colour_list = cm.rainbow(np.linspace(0,1,num_cluster))
+            colour_list = cm.rainbow(np.linspace(0, 1, num_cluster))
             for point_idx_list, colour in zip(label_point_idx_map.values(), colour_list):
-                plt.scatter(tsne_val[point_idx_list, 0], tsne_val[point_idx_list, 1], c=[colour,])
+                plt.scatter(tsne_val[point_idx_list, 0], tsne_val[point_idx_list, 1], c=[colour, ])
         else:
             plt.scatter(tsne_val[:, 0], tsne_val[:, 1])
         plt.savefig(fname=f'./figures/tnse.png')

@@ -1,11 +1,11 @@
 import os
 
+import numpy as np
 import torch
 import torchvision.datasets as datasetLoader
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset
 from torchvision.io import read_image, ImageReadMode
-import numpy as np
 
 
 class ImageLoader(Dataset):
@@ -73,9 +73,6 @@ class LoadData:
                               transform=transforms.Compose([
                                   transforms.Resize(size=self.image_dim)
                               ]))
-        # for image_data in temp_dataset:
-        #     print(image_data.shape)
-        #     print(image_data)
         self.train_dataset, self.validation_dataset = self._split_dataset(dataset=dataset)
         labels_dict = {v: k for k, v in self.test_dataset.class_to_idx.items()}
         print(f"The test dataset labels are as following: {labels_dict}")
@@ -122,7 +119,6 @@ class TrainAutoencoder:
     def train(self):
         self.train_loss = 0
         for data_batch in self.train_dataloader:
-            # data_batch = data_batch.double()
             data_batch = data_batch.to(self.device)
             output = self.model(data_batch)
             loss = self.loss_func(output, data_batch)
@@ -206,12 +202,9 @@ class LatentVecConversion:
         self.maxpool_indices_array = torch.zeros(self.maxpool_size, dtype=torch.int64).to(self.device)
         encoder = self.model.get_encoder()
         for data_batch in dataloader:
-            # data_batch = data_batch.double()
             data_batch = data_batch.to(self.device)
             output = encoder(data_batch)
-            # print(output.shape)
             maxpool_indices = encoder.get_maxpool_indices()
-            # print(maxpool_indices.shape)
             latent_vec = torch.flatten(output, 1).detach()
             all_latent_vec = torch.vstack((all_latent_vec, latent_vec))
             self.maxpool_indices_array = torch.vstack((self.maxpool_indices_array, maxpool_indices))
@@ -247,17 +240,3 @@ class LatentVecConversion:
 
     def get_test_vec_data(self):
         return self.all_test_latent_vec, self.test_labels
-
-
-# class LabelMapping:
-#     def __init__(self, encoder, device, cluster_obj):
-#         self.device = device
-#         self.encoder = encoder.to(self.device).double()
-#         self.cluster_obj = cluster_obj
-#
-#     def map_labels(self, cluster_obj, all_latent_vec):
-#         fitted_cluster_model = self.cluster_obj.get_cluster_model()
-#         for data_batch, label in dataloader:
-#             data_batch = data_batch.to(self.device)
-#             data_batch = data_batch.double()
-#             latent_vec = self.encoder(data_batch)

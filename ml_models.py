@@ -2,10 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as Func
-from sklearn.cluster  import KMeans
+from sklearn.cluster import KMeans
 
-
-# autoencoder model:
 
 # encoder:
 # autoencoder model:
@@ -28,14 +26,17 @@ class ConvEncoder(nn.Module):
                                stride=encoder_setup['conv3']['stride'], padding=0)
         self.maxPool = nn.MaxPool2d(kernel_size=encoder_setup['pool']['kernel_sz'],
                                     stride=encoder_setup['pool']['stride'], return_indices=True)
-        self.linear1 = nn.Linear(in_features=encoder_setup['ln1']['in_feat'], out_features=encoder_setup['ln1']['out_feat'])
-        self.linear2 = nn.Linear(in_features=encoder_setup['ln2']['in_feat'], out_features=encoder_setup['ln2']['out_feat'])
-        self.linear3 = nn.Linear(in_features=encoder_setup['ln3']['in_feat'], out_features=encoder_setup['ln3']['out_feat'])
+        self.linear1 = nn.Linear(in_features=encoder_setup['ln1']['in_feat'],
+                                 out_features=encoder_setup['ln1']['out_feat'])
+        self.linear2 = nn.Linear(in_features=encoder_setup['ln2']['in_feat'],
+                                 out_features=encoder_setup['ln2']['out_feat'])
+        self.linear3 = nn.Linear(in_features=encoder_setup['ln3']['in_feat'],
+                                 out_features=encoder_setup['ln3']['out_feat'])
         self.linear4 = nn.Linear(in_features=encoder_setup['ln4']['in_feat'], out_features=latent_dims)
         self.maxpool_indices = None
 
-    def forward(self, input):
-        x = self.conv1(input)
+    def forward(self, x):
+        x = self.conv1(x)
         x = Func.relu(x)
         x = self.conv2(x)
         x = Func.relu(x)
@@ -61,9 +62,12 @@ class ConvDecoder(nn.Module):
     def __init__(self, latent_dims, decoder_setup):
         super(ConvDecoder, self).__init__()
         self.linear1 = nn.Linear(in_features=latent_dims, out_features=decoder_setup['ln1']['out_feat'])
-        self.linear2 = nn.Linear(in_features=decoder_setup['ln2']['in_feat'], out_features=decoder_setup['ln2']['out_feat'])
-        self.linear3 = nn.Linear(in_features=decoder_setup['ln3']['in_feat'], out_features=decoder_setup['ln3']['out_feat'])
-        self.linear4 = nn.Linear(in_features=decoder_setup['ln4']['in_feat'], out_features=decoder_setup['ln4']['out_feat'])
+        self.linear2 = nn.Linear(in_features=decoder_setup['ln2']['in_feat'],
+                                 out_features=decoder_setup['ln2']['out_feat'])
+        self.linear3 = nn.Linear(in_features=decoder_setup['ln3']['in_feat'],
+                                 out_features=decoder_setup['ln3']['out_feat'])
+        self.linear4 = nn.Linear(in_features=decoder_setup['ln4']['in_feat'],
+                                 out_features=decoder_setup['ln4']['out_feat'])
         self.unflatten = nn.Unflatten(dim=1, unflattened_size=decoder_setup['unflatten']['sz'])
         self.invMaxPool = nn.MaxUnpool2d(kernel_size=decoder_setup['invpool']['kernel_sz'],
                                          stride=decoder_setup['invpool']['stride'], padding=0)
@@ -162,6 +166,3 @@ class Clustering:
 
     def get_cluster_centroid(self):
         return self.cluster_centroid_idx
-
-
-
