@@ -20,8 +20,8 @@ class ValidateAutoencoder:
         self.tot_test_loss = 0
         for data_batch in self.dataloader:
             data_batch = data_batch.to(self.device)
-            output = model(data_batch)
-            loss = self.loss_func(output, data_batch)
+            output, loss = model(data_batch)
+            # loss = self.loss_func(output, data_batch)
             self.tot_test_loss += loss.clone().detach()
 
     def get_test_loss(self):
@@ -63,7 +63,7 @@ class PlotAutoencoderGraph:
             if idx == 5:
                 break
             data_batch = data_batch.to(self.device)
-            output = model(data_batch)
+            output, loss = model(data_batch)
             original_img = self._convert_to_plt_image(img_tensor=data_batch[0])
             recons_img = self._convert_to_plt_image(img_tensor=output[0].detach())
             ax[0, idx].imshow(original_img)

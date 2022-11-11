@@ -32,8 +32,14 @@ class ConvEncoder(nn.Module):
                                  out_features=encoder_setup['ln2']['out_feat'])
         self.linear3 = nn.Linear(in_features=encoder_setup['ln3']['in_feat'],
                                  out_features=encoder_setup['ln3']['out_feat'])
-        self.linear4 = nn.Linear(in_features=encoder_setup['ln4']['in_feat'], out_features=latent_dims)
+        self.linear4 = nn.Linear(in_features=encoder_setup['ln4']['in_feat'],
+                                 out_features=encoder_setup['ln4']['out_feat'])
+        self.mean_linear = nn.Linear(in_features=encoder_setup['mean_ln']['in_feat'], out_features=latent_dims)
+        self.std_linear = nn.Linear(in_features=encoder_setup['std_ln']['in_feat'], out_features=latent_dims)
         self.maxpool_indices = None
+        # self.mean_x = None
+        # self.std_x = None
+        self.norm_dist = torch.distributions.Normal(0, 1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -51,10 +57,17 @@ class ConvEncoder(nn.Module):
         x = self.linear3(x)
         x = Func.relu(x)
         x = self.linear4(x)
-        return x
+        x = Func.relu(x)
+        mean_x = self.mean_linear(x)
+        std_x = torch.exp(self.std_linear(x))
+        x = mean_x + std_x * self.norm_dist.sample()
+        return x, mean_x, std_x
 
     def get_maxpool_indices(self):
         return self.maxpool_indices
+
+    # def get_mean_std(self):
+    #     return self.mean_x, self.std_x
 
 
 # decoder:
@@ -105,22 +118,65 @@ class ConvDecoder(nn.Module):
 
 
 # autoencoder:
-class Autoencoder(nn.Module):
+class VAE(nn.Module):
     def __init__(self, latent_dims, autoencoder_setup):
-        super(Autoencoder, self).__init__()
+        super(VAE, self).__init__()
         self.encoder = ConvEncoder(latent_dims, autoencoder_setup['encoder'])
         self.decoder = ConvDecoder(latent_dims, autoencoder_setup['decoder'])
+        # self.latent_vec = None
+        # self.kl_div_val = None
+        # self.mse_loss_val = None
+        # self.loss_val = None
+        self.log_std = nn.Parameter(torch.tensor([0.0]))
+
+    def likelihood(self, x_hat, x):
+        std = torch.exp(self.log_std)
+        p = torch.distributions.Normal(x_hat, std)
+        log_p = p.log_prob(x).sum(dim=(1, 2, 3))
+        return log_p
+
+    # def mse_loss(self, x_hat, x):
+    #     return torch.square((x_hat - x)).sum(dim=(1, 2, 3))
+
+    def kl_div(self, x, mean, sigma):
+        p = torch.distributions.Normal(torch.zeros_like(mean), torch.ones_like(sigma))
+        q = torch.distributions.Normal(mean, sigma)
+        log_q = q.log_prob(x)
+        log_p = p.log_prob(x)
+        kl_div_val = (log_q - log_p).sum(-1)
+        return kl_div_val
 
     def forward(self, input):
-        latent_vector = self.encoder(input)
+        latent_vector, mean_x, std_x = self.encoder(input)
         maxpool_indices = self.encoder.get_maxpool_indices()
-        return self.decoder(latent_vector, maxpool_indices)
+        # mean_x, std_x = self.encoder.get_mean_std()
+        kl_div_val = self.kl_div(x=latent_vector, mean=mean_x, sigma=std_x)
+        x_hat = self.decoder(latent_vector, maxpool_indices)
+        # self.mse_loss_val = self.mse_loss(x_hat=x_hat, x=input)
+        recon_loss = self.likelihood(x_hat=x_hat, x=input)
+        loss_val = (kl_div_val - recon_loss).sum()
+        return x_hat, loss_val
 
     def get_encoder(self):
         return self.encoder
 
     def get_decoder(self):
         return self.decoder
+
+    # def get_latent_vec(self):
+    #     return self.latent_vec
+
+    # def get_loss(self):
+    #     return self.loss_val
+
+    # def get_kl_div_val(self):
+    #     return self.kl_div_val
+    #
+    # def get_mse_loss_val(self):
+    #     return self.mse_loss_val
+
+
+# class VAELoss:
 
 
 class Clustering:

@@ -108,10 +108,10 @@ class LoadData:
 
 
 class TrainAutoencoder:
-    def __init__(self, train_dataloader, model, loss_func, optimizer, device):
+    def __init__(self, train_dataloader, model, loss_obj, optimizer, device):
         self.train_dataloader = train_dataloader
         self.model = model.to(device).double()
-        self.loss_func = loss_func
+        self.loss_obj = loss_obj
         self.optimizer = optimizer
         self.device = device
         self.train_loss = None
@@ -120,8 +120,14 @@ class TrainAutoencoder:
         self.train_loss = 0
         for data_batch in self.train_dataloader:
             data_batch = data_batch.to(self.device)
-            output = self.model(data_batch)
-            loss = self.loss_func(output, data_batch)
+            output, loss = self.model(data_batch)
+            # kl_div_val = self.model.get_kl_div_val()
+            # recon_loss = self.loss_obj.mse_loss(x_hat=output, x=data_batch)
+            # mean_x, std_x = self.model.get_encoder().get_mean_std()
+            # latent_vec = self.model.get_latent_vec()
+            # kl_div_val = self.loss_obj.kl_div(x=latent_vec, mean=mean_x, sigma=std_x)
+            # loss = (kl_div_val - recon_loss).sum()
+            # loss = self.model.get_loss()
             self.train_loss += loss.clone().detach()
             self.optimizer.zero_grad()
             loss.backward()

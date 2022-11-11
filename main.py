@@ -5,15 +5,16 @@ import torch.nn as nn
 import torch.optim as optim
 
 from evaluation import ValidateAutoencoder, PlotAutoencoderGraph, EvaluateClustering, LabelCorrection
-from ml_models import Autoencoder, Clustering
+from ml_models import VAE, Clustering
 from process_data import LoadData, TrainAutoencoder, SaveLoadAutoencoderModel, LatentVecConversion
 
 
 class Execute:
     def __init__(self, setup_info):
-        self.autoencoder_model = Autoencoder(latent_dims=setup_info['latent_dim'], autoencoder_setup=setup_info['autoencoder'])
+        self.autoencoder_model = VAE(latent_dims=setup_info['latent_dim'], autoencoder_setup=setup_info['autoencoder'])
         self.autoencoder_adam_optimizer = optim.Adam(self.autoencoder_model.parameters(), lr=setup_info['lr'])
         self.mse_loss_func = nn.MSELoss()
+        # self.loss_obj = VAELoss()
 
         self.load_data_obj = LoadData(batch_size=setup_info['batch_size'],
                                       image_dim=setup_info['img_dim'],
@@ -23,8 +24,7 @@ class Execute:
         self.load_data_obj.create_dataloaders()
 
         self.train_autoencoder_obj = TrainAutoencoder(train_dataloader=self.load_data_obj.get_train_dataloader(),
-                                                      model=self.autoencoder_model,
-                                                      loss_func=self.mse_loss_func,
+                                                      model=self.autoencoder_model, loss_obj=self.mse_loss_func,
                                                       optimizer=self.autoencoder_adam_optimizer,
                                                       device=setup_info['device'])
 
@@ -203,7 +203,10 @@ def get_setup_json():
                                                       'out_feat': 512},
                                               'ln3': {'in_feat': 512,
                                                       'out_feat': 256},
-                                              'ln4': {'in_feat': 256}},
+                                              'ln4': {'in_feat': 256,
+                                                      'out_feat': 150},
+                                              'mean_ln': {'in_feat': 150},
+                                              'std_ln': {'in_feat': 150}},
                                   'decoder': {'ln1': {'out_feat': 256},
                                               'ln2': {'in_feat': 256,
                                                       'out_feat': 512},
