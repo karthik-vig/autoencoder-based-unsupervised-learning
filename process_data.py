@@ -209,7 +209,7 @@ class LatentVecConversion:
         encoder = self.model.get_encoder()
         for data_batch in dataloader:
             data_batch = data_batch.to(self.device)
-            output = encoder(data_batch)
+            output, _, _ = encoder(data_batch)
             maxpool_indices = encoder.get_maxpool_indices()
             latent_vec = torch.flatten(output, 1).detach()
             all_latent_vec = torch.vstack((all_latent_vec, latent_vec))
@@ -227,7 +227,7 @@ class LatentVecConversion:
             self.test_labels += label.tolist()
             data_batch = data_batch.double()
             data_batch = data_batch.to(self.device)
-            output = encoder(data_batch)
+            output, _, _ = encoder(data_batch)
             maxpool_indices = encoder.get_maxpool_indices()
             latent_vec = torch.flatten(output, 1).detach()
             all_test_latent_vec = torch.vstack((all_test_latent_vec, latent_vec))
