@@ -108,13 +108,18 @@ class LoadData:
 
 
 class TrainAutoencoder:
-    def __init__(self, train_dataloader, model, loss_obj, optimizer, device):
+    def __init__(self, train_dataloader, model, optimizer, device):
         self.train_dataloader = train_dataloader
-        self.model = model.to(device).double()
-        self.loss_obj = loss_obj
         self.optimizer = optimizer
         self.device = device
+        self.model = model.to(self.device).double()
         self.train_loss = None
+
+    def set_model(self, model):
+        self.model = model.to(self.device).double()
+
+    def set_optimizer(self, optimizer):
+        self.optimizer = optimizer
 
     def train(self):
         self.train_loss = 0

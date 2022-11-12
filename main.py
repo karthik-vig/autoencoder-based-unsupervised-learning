@@ -11,9 +11,10 @@ from process_data import LoadData, TrainAutoencoder, SaveLoadAutoencoderModel, L
 
 class Execute:
     def __init__(self, setup_info):
+        self.learning_rate = setup_info['lr']
         self.autoencoder_model = VAE(latent_dims=setup_info['latent_dim'], autoencoder_setup=setup_info['autoencoder'])
         self.autoencoder_adam_optimizer = optim.Adam(self.autoencoder_model.parameters(), lr=setup_info['lr'])
-        self.mse_loss_func = nn.MSELoss()
+        # self.mse_loss_func = nn.MSELoss()
         # self.loss_obj = VAELoss()
 
         self.load_data_obj = LoadData(batch_size=setup_info['batch_size'],
@@ -24,12 +25,11 @@ class Execute:
         self.load_data_obj.create_dataloaders()
 
         self.train_autoencoder_obj = TrainAutoencoder(train_dataloader=self.load_data_obj.get_train_dataloader(),
-                                                      model=self.autoencoder_model, loss_obj=self.mse_loss_func,
+                                                      model=self.autoencoder_model,
                                                       optimizer=self.autoencoder_adam_optimizer,
                                                       device=setup_info['device'])
 
         self.test_autoencoder_obj = ValidateAutoencoder(dataloader=self.load_data_obj.get_validation_dataloader(),
-                                                        loss_func=self.mse_loss_func,
                                                         device=setup_info['device'])
 
         self.save_load_autoencoder_obj = SaveLoadAutoencoderModel(file_dir='autoencoder_models')
@@ -54,9 +54,13 @@ class Execute:
         self.train_maxpool_indices = None
         self.train_pred_labels = None
 
-    def execute_train_autoencoder(self, start_epoch, end_epoch):
+    def execute_train_autoencoder(self, start_epoch, end_epoch, model=None, optimizer=None):
         num_digit = len(str(end_epoch))
         end_epoch += 1
+        if model and optimizer:
+            print('Loading model .... ')
+            self.train_autoencoder_obj.set_model(model=model)
+            self.train_autoencoder_obj.set_optimizer(optimizer=optimizer)
         for epoch in range(start_epoch, end_epoch):
             # train model
             self.train_autoencoder_obj.train()
@@ -153,10 +157,27 @@ class Execute:
         v_score = self.eva_cluster_obj.get_vmeasure_score()
         print(f'The v-measure score is: {v_score}')
 
+    def exe_con_train_autoencoder(self, model_num, end_epoch):
+        file_name_list = os.listdir('./autoencoder_models/')
+        file_name_list.sort()
+        model_file_name = file_name_list[model_num]
+        model_data = self.save_load_autoencoder_obj.load(select_model=model_num)
+        model = model_data['model']
+        optimizer = optim.Adam(model.parameters(), lr=self.learning_rate)
+        start_epoch = int(model_file_name.split('_')[-1][:-3]) + 1
+        self.execute_train_autoencoder(start_epoch=start_epoch,
+                                       end_epoch=end_epoch,
+                                       model=model,
+                                       optimizer=optimizer)
+
     def execute_input(self, mode, execution_info):
         if mode == 'train_autoencoder':
             self.execute_train_autoencoder(start_epoch=1,
                                            end_epoch=execution_info['end_epoch'])
+
+        elif mode == 'continue_train_autoencoder':
+            self.exe_con_train_autoencoder(model_num=execution_info['select_con_auto_model'],
+                                           end_epoch=execution_info['con_auto_end_epoch'])
 
         elif mode == 'train_cluster':
             self.execute_train_cluster_model(select_model=execution_info['select_auto_model_clustering'])
@@ -256,11 +277,14 @@ def select_autoencoder_model():
         return None
     return input_val - 1
 
-
 def user_train_auto_input():
     user_train_auto_input_map = {'end_epoch': int(input('Enter the number of epochs: '))}
     return user_train_auto_input_map
 
+def user_con_train_auto_input():
+    user_con_train_auto_input_map = {'select_con_auto_model': select_autoencoder_model(),
+                                     'con_auto_end_epoch': int(input('Enter the end epoch: '))}
+    return user_con_train_auto_input_map
 
 def user_train_cluser_input():
     user_train_cluser_input_map = {'select_auto_model_clustering': select_autoencoder_model()}
@@ -298,11 +322,12 @@ def user_input():
     user_input_value = {}
     setup_info = get_setup_json()
     mode_map = {1: 'train_autoencoder',
-                2: 'train_cluster',
-                3: 'eva_autoencoder',
-                4: 'cal_sil',
-                5: 'cal_distortion',
-                6: 'cal_vmeasure'}
+                2: 'continue_train_autoencoder',
+                3: 'train_cluster',
+                4: 'eva_autoencoder',
+                5: 'cal_sil',
+                6: 'cal_distortion',
+                7: 'cal_vmeasure'}
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     curr_dir = curr_dir.replace("""\\""", """/""")
     setup_info['train_dataset_loc'] = curr_dir + '/data/train_dataset'
@@ -318,6 +343,8 @@ def user_input():
     exe_info_input = None
     if mode_input == 'train_autoencoder':
         exe_info_input = user_train_auto_input()
+    elif mode_input == 'continue_train_autoencoder':
+        exe_info_input = user_con_train_auto_input()
     elif mode_input == 'train_cluster':
         exe_info_input = user_train_cluser_input()
     elif mode_input == 'eva_autoencoder':

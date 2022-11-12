@@ -9,9 +9,8 @@ from sklearn.metrics import silhouette_score, v_measure_score
 
 
 class ValidateAutoencoder:
-    def __init__(self, dataloader, loss_func, device):
+    def __init__(self, dataloader, device):
         self.device = device
-        self.loss_func = loss_func
         self.dataloader = dataloader
         self.tot_test_loss = 0
 
