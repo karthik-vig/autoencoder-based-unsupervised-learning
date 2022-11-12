@@ -1,5 +1,6 @@
 import json
 import os
+import pprint
 
 import torch.nn as nn
 import torch.optim as optim
@@ -260,10 +261,14 @@ def get_setup_json():
                   }
     if 'setup.json' in os.listdir('./'):
         with open('setup.json', 'r') as json_file:
+            print('Reading setup.json from disk...')
             setup_json = json.load(json_file)
     else:
+        print('Using Default setup.json file...')
         with open('setup.json', 'w') as json_file:
             json.dump(setup_json, json_file)
+    print(f'Setup file info: ')
+    pprint.pprint(setup_json)
     return setup_json
 
 
