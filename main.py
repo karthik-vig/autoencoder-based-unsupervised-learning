@@ -123,29 +123,30 @@ class Execute:
         # for idx, latent_vec in enumerate(self.all_latent_train_vec):
         # plt.scatter(self.all_latent_train_vec[:, 0], self.all_latent_train_vec[:, 1])
         # plt.show()
-        plt.close()
-        self.transform_to_latent_vec_obj.set_model(model=model)
-        self.transform_to_latent_vec_obj.cal_test_latent_vec(test_dataloader=self.load_data_obj.get_test_dataloader())
-        test_latent_vec, test_labels = self.transform_to_latent_vec_obj.get_test_vec_data()
-        label_idx = {}
-        for idx, label in enumerate(test_labels):
-            value = label_idx.get(label, [])
-            value.append(idx)
-            label_idx[label] = value
-        num_cluster = len(label_idx)
-        colour_list = cm.rainbow(np.linspace(0, 1, num_cluster))
-        for val, colour in zip(label_idx.values(), colour_list):
-            plt.scatter(test_latent_vec[val, 0], test_latent_vec[val, 1], c=[colour, ])
-        plt.show()
+        #################### part 2 from here:
+        # plt.close()
+        # self.transform_to_latent_vec_obj.set_model(model=model)
+        # self.transform_to_latent_vec_obj.cal_test_latent_vec(test_dataloader=self.load_data_obj.get_test_dataloader())
+        # test_latent_vec, test_labels = self.transform_to_latent_vec_obj.get_test_vec_data()
+        # label_idx = {}
+        # for idx, label in enumerate(test_labels):
+        #     value = label_idx.get(label, [])
+        #     value.append(idx)
+        #     label_idx[label] = value
+        # num_cluster = len(label_idx)
+        # colour_list = cm.rainbow(np.linspace(0, 1, num_cluster))
+        # for val, colour in zip(label_idx.values(), colour_list):
+        #     plt.scatter(test_latent_vec[val, 0], test_latent_vec[val, 1], c=[colour, ])
+        # plt.show()
         ################
-        # self.plot_graph_obj.plot_loss(no_epoch=no_epochs,
-        #                               loss_list=train_loss,
-        #                               title='Train Loss')
-        # self.plot_graph_obj.plot_loss(no_epoch=no_epochs,
-        #                               loss_list=test_loss,
-        #                               title='Test Loss')
-        # self.plot_graph_obj.draw_image(dataloader=self.load_data_obj.get_validation_dataloader(),
-        #                                model=model)
+        self.plot_graph_obj.plot_loss(no_epoch=no_epochs,
+                                      loss_list=train_loss,
+                                      title='Train Loss')
+        self.plot_graph_obj.plot_loss(no_epoch=no_epochs,
+                                      loss_list=test_loss,
+                                      title='Test Loss')
+        self.plot_graph_obj.draw_image(dataloader=self.load_data_obj.get_validation_dataloader(),
+                                       model=model)
 
     def cal_sil(self, select_model, start, end, step):
         self.cal_latent_vec_for_model(select_model=select_model)
