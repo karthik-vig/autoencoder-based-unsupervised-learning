@@ -2,7 +2,9 @@ import json
 import os
 import pprint
 
-import torch.nn as nn
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import numpy as np
 import torch.optim as optim
 
 from evaluation import ValidateAutoencoder, PlotAutoencoderGraph, EvaluateClustering, LabelCorrection
@@ -39,7 +41,8 @@ class Execute:
 
         self.clustering_obj = Clustering(no_cluster=setup_info['num_cluster'])
 
-        self.transform_to_latent_vec_obj = LatentVecConversion(device=setup_info['device'], latent_dim=setup_info['latent_dim'],
+        self.transform_to_latent_vec_obj = LatentVecConversion(device=setup_info['device'],
+                                                               latent_dim=setup_info['latent_dim'],
                                                                maxpool_size=setup_info['maxpool_size'])
 
         self.eva_cluster_obj = EvaluateClustering(Clustering=Clustering)
@@ -112,14 +115,37 @@ class Execute:
 
         model_data = self.save_load_autoencoder_obj.load(select_model=select_model)
         model = model_data['model']
-        self.plot_graph_obj.plot_loss(no_epoch=no_epochs,
-                                      loss_list=train_loss,
-                                      title='Train Loss')
-        self.plot_graph_obj.plot_loss(no_epoch=no_epochs,
-                                      loss_list=test_loss,
-                                      title='Test Loss')
-        self.plot_graph_obj.draw_image(dataloader=self.load_data_obj.get_validation_dataloader(),
-                                       model=model)
+        ################
+        # disable later:
+        # self.cal_latent_vec_for_model(select_model=select_model)
+        # plt.close()
+        # print(self.all_latent_train_vec.shape)
+        # for idx, latent_vec in enumerate(self.all_latent_train_vec):
+        # plt.scatter(self.all_latent_train_vec[:, 0], self.all_latent_train_vec[:, 1])
+        # plt.show()
+        plt.close()
+        self.transform_to_latent_vec_obj.set_model(model=model)
+        self.transform_to_latent_vec_obj.cal_test_latent_vec(test_dataloader=self.load_data_obj.get_test_dataloader())
+        test_latent_vec, test_labels = self.transform_to_latent_vec_obj.get_test_vec_data()
+        label_idx = {}
+        for idx, label in enumerate(test_labels):
+            value = label_idx.get(label, [])
+            value.append(idx)
+            label_idx[label] = value
+        num_cluster = len(label_idx)
+        colour_list = cm.rainbow(np.linspace(0, 1, num_cluster))
+        for val, colour in zip(label_idx.values(), colour_list):
+            plt.scatter(test_latent_vec[val, 0], test_latent_vec[val, 1], c=[colour, ])
+        plt.show()
+        ################
+        # self.plot_graph_obj.plot_loss(no_epoch=no_epochs,
+        #                               loss_list=train_loss,
+        #                               title='Train Loss')
+        # self.plot_graph_obj.plot_loss(no_epoch=no_epochs,
+        #                               loss_list=test_loss,
+        #                               title='Test Loss')
+        # self.plot_graph_obj.draw_image(dataloader=self.load_data_obj.get_validation_dataloader(),
+        #                                model=model)
 
     def cal_sil(self, select_model, start, end, step):
         self.cal_latent_vec_for_model(select_model=select_model)
@@ -282,14 +308,17 @@ def select_autoencoder_model():
         return None
     return input_val - 1
 
+
 def user_train_auto_input():
     user_train_auto_input_map = {'end_epoch': int(input('Enter the number of epochs: '))}
     return user_train_auto_input_map
+
 
 def user_con_train_auto_input():
     user_con_train_auto_input_map = {'select_con_auto_model': select_autoencoder_model(),
                                      'con_auto_end_epoch': int(input('Enter the end epoch: '))}
     return user_con_train_auto_input_map
+
 
 def user_train_cluser_input():
     user_train_cluser_input_map = {'select_auto_model_clustering': select_autoencoder_model()}

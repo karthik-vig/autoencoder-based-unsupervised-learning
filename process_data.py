@@ -226,7 +226,9 @@ class LatentVecConversion:
         print(f'Calculating test latent vec')
         self.test_labels = []
         all_test_latent_vec = torch.zeros((1, self.latent_dim), dtype=torch.float64).to(self.device)
+        # print(self.maxpool_size)
         self.test_maxpool_indices_array = torch.zeros(self.maxpool_size, dtype=torch.int64).to(self.device)
+        # print(self.test_maxpool_indices_array)
         encoder = self.model.get_encoder()
         for data_batch, label in test_dataloader:
             self.test_labels += label.tolist()
@@ -236,9 +238,12 @@ class LatentVecConversion:
             maxpool_indices = encoder.get_maxpool_indices()
             latent_vec = torch.flatten(output, 1).detach()
             all_test_latent_vec = torch.vstack((all_test_latent_vec, latent_vec))
-            self.test_maxpool_indices_array = torch.vstack((self.maxpool_indices_array, maxpool_indices.cpu()))
+            # print(f'maxpool indices shape: {maxpool_indices.shape}')
+            # print(f'test maxpool indices array : {self.test_maxpool_indices_array.shape}')
+            self.test_maxpool_indices_array = torch.vstack((self.test_maxpool_indices_array, maxpool_indices))
+            # print('done')
         self.all_test_latent_vec = all_test_latent_vec[1:, :].cpu().numpy()
-        self.test_maxpool_indices_array = self.maxpool_indices_array[1:].cpu()
+        self.test_maxpool_indices_array = self.test_maxpool_indices_array[1:].cpu()
 
     def get_all_latent_vec(self):
         return self.all_latent_vec
