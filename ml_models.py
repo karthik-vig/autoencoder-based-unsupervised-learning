@@ -189,7 +189,7 @@ class Clustering:
         # self.cluster_centroid_idx = {}
 
     def clustering_fit(self, all_latent_vec):
-        cluster_obj = OPTICS(max_eps=0.1, cluster_method='dbscan')
+        cluster_obj = OPTICS()
         self.fitted_cluster_model = cluster_obj.fit(all_latent_vec)
 
     # def clustering_predict(self, all_latent_vec):

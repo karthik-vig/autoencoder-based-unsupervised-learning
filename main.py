@@ -2,9 +2,9 @@ import json
 import os
 import pprint
 
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-import numpy as np
+# import matplotlib.cm as cm
+# import matplotlib.pyplot as plt
+# import numpy as np
 import torch.optim as optim
 
 from evaluation import ValidateAutoencoder, PlotAutoencoderGraph, EvaluateClustering, LabelCorrection
@@ -100,13 +100,14 @@ class Execute:
     def execute_train_cluster_model(self, select_model):
         self.cal_latent_vec_for_model(select_model=select_model)
         self.clustering_obj.clustering_fit(all_latent_vec=self.all_latent_train_vec)
-        self.clustering_obj.clustering_predict(all_latent_vec=self.all_latent_train_vec)
+        # self.clustering_obj.clustering_predict(all_latent_vec=self.all_latent_train_vec)
         self.train_pred_labels = self.clustering_obj.get_pred_labels()
         label_point_idx_map = {}
         for idx, label in enumerate(self.train_pred_labels):
             value = label_point_idx_map.get(label, [])
             value.append(idx)
             label_point_idx_map[label] = value
+        print(f'number of labels: {len(label_point_idx_map)}, number of points in -1 label: {len(label_point_idx_map[-1])}')
         self.plot_graph_obj.draw_tsne(all_latent_vec=self.all_latent_train_vec,
                                       label_point_idx_map=label_point_idx_map)
 
@@ -156,34 +157,35 @@ class Execute:
         print(f'The silhouette score list is: {sil_score_list}')
         self.eva_cluster_obj.draw_sil_score_list()
 
-    def cal_dis(self, select_model, start, end, step):
-        self.cal_latent_vec_for_model(select_model=select_model)
-        self.eva_cluster_obj.set_all_latent_vec(all_latent_vec=self.all_latent_train_vec)
-        self.eva_cluster_obj.cal_distortion_range(start=start, end=end, step=step)
-        distortion_list = self.eva_cluster_obj.get_distortion_list()
-        print(f'The distortion list is: {distortion_list}')
-        self.eva_cluster_obj.draw_distortion_list()
+    # def cal_dis(self, select_model, start, end, step):
+    #     self.cal_latent_vec_for_model(select_model=select_model)
+    #     self.eva_cluster_obj.set_all_latent_vec(all_latent_vec=self.all_latent_train_vec)
+    #     self.eva_cluster_obj.cal_distortion_range(start=start, end=end, step=step)
+    #     distortion_list = self.eva_cluster_obj.get_distortion_list()
+    #     print(f'The distortion list is: {distortion_list}')
+    #     self.eva_cluster_obj.draw_distortion_list()
 
     def cal_vmeasure(self, select_model, no_cluster):
-        self.cal_latent_vec_for_model(select_model=select_model)
-        model = self.model_data['model']
-        self.label_correc_obj.set_decoder(decoder=model.get_decoder())
-        self.label_correc_obj.set_maxpool_indices(maxpool_indices_array=self.train_maxpool_indices)
-        self.cal_latent_vec_for_model(select_model=select_model)
-        self.clustering_obj.clustering_fit(all_latent_vec=self.all_latent_train_vec)
-        self.clustering_obj.cal_cluster_centroid(all_latent_vec=self.all_latent_train_vec)
-        cluster_centroids_idx = self.clustering_obj.get_cluster_centroid()
-        print(f'The index of latent vector, who are cluster centroids: {cluster_centroids_idx}')
-        self.label_correc_obj.dis_cluster_centroid(all_latent_vec=self.all_latent_train_vec,
-                                                   cluster_centroid_idx=cluster_centroids_idx)
-        label_map = self.label_correc_obj.get_label_map()
-        self.transform_to_latent_vec_obj.cal_test_latent_vec(test_dataloader=self.load_data_obj.get_test_dataloader())
-        all_latent_test_vec, test_labels = self.transform_to_latent_vec_obj.get_test_vec_data()
-        true_labels = [label_map[int(label)] for label in test_labels]
-        self.eva_cluster_obj.set_all_latent_vec(all_latent_vec=all_latent_test_vec)
-        self.eva_cluster_obj.cal_vmeasure_score(no_cluster=no_cluster, true_labels=true_labels)
-        v_score = self.eva_cluster_obj.get_vmeasure_score()
-        print(f'The v-measure score is: {v_score}')
+        pass
+        # self.cal_latent_vec_for_model(select_model=select_model)
+        # model = self.model_data['model']
+        # self.label_correc_obj.set_decoder(decoder=model.get_decoder())
+        # self.label_correc_obj.set_maxpool_indices(maxpool_indices_array=self.train_maxpool_indices)
+        # self.cal_latent_vec_for_model(select_model=select_model)
+        # self.clustering_obj.clustering_fit(all_latent_vec=self.all_latent_train_vec)
+        # self.clustering_obj.cal_cluster_centroid(all_latent_vec=self.all_latent_train_vec)
+        # cluster_centroids_idx = self.clustering_obj.get_cluster_centroid()
+        # print(f'The index of latent vector, who are cluster centroids: {cluster_centroids_idx}')
+        # self.label_correc_obj.dis_cluster_centroid(all_latent_vec=self.all_latent_train_vec,
+        #                                            cluster_centroid_idx=cluster_centroids_idx)
+        # label_map = self.label_correc_obj.get_label_map()
+        # self.transform_to_latent_vec_obj.cal_test_latent_vec(test_dataloader=self.load_data_obj.get_test_dataloader())
+        # all_latent_test_vec, test_labels = self.transform_to_latent_vec_obj.get_test_vec_data()
+        # true_labels = [label_map[int(label)] for label in test_labels]
+        # self.eva_cluster_obj.set_all_latent_vec(all_latent_vec=all_latent_test_vec)
+        # self.eva_cluster_obj.cal_vmeasure_score(no_cluster=no_cluster, true_labels=true_labels)
+        # v_score = self.eva_cluster_obj.get_vmeasure_score()
+        # print(f'The v-measure score is: {v_score}')
 
     def exe_con_train_autoencoder(self, model_num, end_epoch):
         file_name_list = os.listdir('./autoencoder_models/')
@@ -220,11 +222,11 @@ class Execute:
                          end=execution_info['cluster_sil_end'],
                          step=execution_info['cluster_sil_step'])
 
-        elif mode == 'cal_distortion':
-            self.cal_dis(select_model=execution_info['select_cluster_model_dis'],
-                         start=execution_info['cluster_dis_start'],
-                         end=execution_info['cluster_dis_end'],
-                         step=execution_info['cluster_dis_step'])
+        # elif mode == 'cal_distortion':
+        #     self.cal_dis(select_model=execution_info['select_cluster_model_dis'],
+        #                  start=execution_info['cluster_dis_start'],
+        #                  end=execution_info['cluster_dis_end'],
+        #                  step=execution_info['cluster_dis_step'])
 
         elif mode == 'cal_vmeasure':
             self.cal_vmeasure(select_model=execution_info['select_cluster_model_vmeasure'],
@@ -339,12 +341,12 @@ def user_cal_sil_input():
     return user_cal_sil_input_map
 
 
-def user_cal_dis_input():
-    user_cal_dis_input_map = {'select_cluster_model_dis': select_autoencoder_model(),
-                              'cluster_dis_start': int(input('Enter the start number of cluster: ')),
-                              'cluster_dis_end': int(input('Enter the end number of cluster: ')),
-                              'cluster_dis_step': int(input('Enter the step to increase number of clusters: '))}
-    return user_cal_dis_input_map
+# def user_cal_dis_input():
+#     user_cal_dis_input_map = {'select_cluster_model_dis': select_autoencoder_model(),
+#                               'cluster_dis_start': int(input('Enter the start number of cluster: ')),
+#                               'cluster_dis_end': int(input('Enter the end number of cluster: ')),
+#                               'cluster_dis_step': int(input('Enter the step to increase number of clusters: '))}
+#     return user_cal_dis_input_map
 
 
 def user_cal_vmeasure_input():
@@ -361,8 +363,8 @@ def user_input():
                 3: 'train_cluster',
                 4: 'eva_autoencoder',
                 5: 'cal_sil',
-                6: 'cal_distortion',
-                7: 'cal_vmeasure'}
+                # 6: 'cal_distortion',
+                6: 'cal_vmeasure'}
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     curr_dir = curr_dir.replace("""\\""", """/""")
     setup_info['train_dataset_loc'] = curr_dir + '/data/train_dataset'
@@ -386,8 +388,8 @@ def user_input():
         exe_info_input = user_eva_autoencoder_input()
     elif mode_input == 'cal_sil':
         exe_info_input = user_cal_sil_input()
-    elif mode_input == 'cal_distortion':
-        exe_info_input = user_cal_dis_input()
+    # elif mode_input == 'cal_distortion':
+    #     exe_info_input = user_cal_dis_input()
     elif mode_input == 'cal_vmeasure':
         exe_info_input = user_cal_vmeasure_input()
     user_input_value['execution_info'] = exe_info_input
