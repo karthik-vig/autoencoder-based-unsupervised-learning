@@ -113,19 +113,17 @@ class EvaluateClustering:
         self.clustering_obj = self.Clustering(no_cluster=no_cluster)
         self.clustering_obj.clustering_fit(all_latent_vec=self.all_latent_vec)
 
-    def cal_distortion(self, no_cluster):
-        self._cal_fitted_cluster_model(no_cluster=no_cluster)
-        self.distortion = self.clustering_obj.get_distortion()
+    # def cal_distortion(self, no_cluster):
+    #     self._cal_fitted_cluster_model(no_cluster=no_cluster)
+    #     self.distortion = self.clustering_obj.get_distortion()
 
     def cal_sil_score(self, no_cluster):
         self._cal_fitted_cluster_model(no_cluster=no_cluster)
-        self.clustering_obj.clustering_predict(all_latent_vec=self.all_latent_vec)
         pred_labels = self.clustering_obj.get_pred_labels()
         self.sil_score = silhouette_score(self.all_latent_vec, pred_labels)
 
     def cal_vmeasure_score(self, no_cluster, true_labels):
         self._cal_fitted_cluster_model(no_cluster=no_cluster)
-        self.clustering_obj.clustering_predict(all_latent_vec=self.all_latent_vec)
         pred_labels = self.clustering_obj.get_pred_labels()
         self.vmeasure_score = v_measure_score(labels_true=true_labels, labels_pred=pred_labels)
 
@@ -135,11 +133,11 @@ class EvaluateClustering:
             self.cal_sil_score(no_cluster=no_cluster)
             self.sil_score_list.append((no_cluster, self.get_sil_score()))
 
-    def cal_distortion_range(self, start, end, step):
-        self.distortion_list = []
-        for no_cluster in range(start, end + 1, step):
-            self.cal_distortion(no_cluster=no_cluster)
-            self.distortion_list.append((no_cluster, self.get_distortion()))
+    # def cal_distortion_range(self, start, end, step):
+    #     self.distortion_list = []
+    #     for no_cluster in range(start, end + 1, step):
+    #         self.cal_distortion(no_cluster=no_cluster)
+    #         self.distortion_list.append((no_cluster, self.get_distortion()))
 
     def draw_sil_score_list(self):
         if len(self.sil_score_list) == 0:
@@ -153,15 +151,15 @@ class EvaluateClustering:
         plt.savefig(fname='./figures/sil_score.png')
         plt.show()
 
-    def draw_distortion_list(self):
-        plt.close()
-        plt.figure(figsize=(20, 15), dpi=100)
-        distortion_array = np.array(self.distortion_list)
-        plt.plot(distortion_array[:, 0], distortion_array[:, 1])
-        plt.xlabel('Number of Clusters')
-        plt.ylabel('Distortion')
-        plt.savefig(fname=f'./figures/distortion.png')
-        plt.show()
+    # def draw_distortion_list(self):
+    #     plt.close()
+    #     plt.figure(figsize=(20, 15), dpi=100)
+    #     distortion_array = np.array(self.distortion_list)
+    #     plt.plot(distortion_array[:, 0], distortion_array[:, 1])
+    #     plt.xlabel('Number of Clusters')
+    #     plt.ylabel('Distortion')
+    #     plt.savefig(fname=f'./figures/distortion.png')
+    #     plt.show()
 
     def get_sil_score(self):
         return self.sil_score
@@ -172,11 +170,11 @@ class EvaluateClustering:
     def get_vmeasure_score(self):
         return self.vmeasure_score
 
-    def get_distortion(self):
-        return self.distortion
+    # def get_distortion(self):
+    #     return self.distortion
 
-    def get_distortion_list(self):
-        return self.distortion_list
+    # def get_distortion_list(self):
+    #     return self.distortion_list
 
 
 class LabelCorrection:
@@ -195,12 +193,12 @@ class LabelCorrection:
     def set_maxpool_indices(self, maxpool_indices_array):
         self.maxpool_indices_array = maxpool_indices_array.to(self.device)
 
-    def dis_cluster_centroid(self, all_latent_vec, cluster_centroid_idx):
+    def dis_cluster_point(self, all_latent_vec, cluster_points_idx):
         self.label_map = {}
         all_latent_vec = torch.tensor(all_latent_vec, dtype=torch.float64)
         plt.ion()
-        fig, ax = plt.subplots(1, len(cluster_centroid_idx), figsize=(15, 8))
-        for idx, (cluster_label, centroid_idx) in enumerate(cluster_centroid_idx.items()):
+        fig, ax = plt.subplots(1, len(cluster_points_idx), figsize=(15, 8))
+        for idx, (cluster_label, centroid_idx) in enumerate(cluster_points_idx.items()):
             centroid_features = all_latent_vec[centroid_idx]
             decoder_input = self.unflatten(centroid_features)
             maxpool_idx = self.maxpool_indices_array[centroid_idx].reshape(self.maxpool_size)
@@ -214,7 +212,7 @@ class LabelCorrection:
             plt.pause(0.002)
         plt.pause(2)
         plt.show()
-        for cluster_label in cluster_centroid_idx.keys():
+        for cluster_label in cluster_points_idx.keys():
             true_label = int(input('Enter the label (0-9): '))
             self.label_map[true_label] = cluster_label
         plt.ioff()
